@@ -146,6 +146,7 @@ class OneLinePerSNPData(Data):
     def extract_snps(self, snps):
         """Return a OneLinePerSNPData genotype object containing only
         the snps specified by the index vector 'snps'"""
+        self.numsnps = self.count_numsnps()
         raise ShellFishError('Not yet implemented')
 
 class SNPLoadData(OneLinePerSNPData):
