@@ -444,6 +444,7 @@ class GenData(GenotypeData, OneLinePerSNPData):
 
     def create_mapfile(self):
         """Create mapfile from initial columns of .gen(.gz) file."""
+        log('Creating map file from %s file' % self.format)
         field = dict(chrom=gencol['snpid'], rs=gencol['rs'], cM=None,
                      bp=gencol['bp'], allele1=gencol['allele1'], allele2=gencol['allele2'])
 
@@ -464,16 +465,18 @@ class GenData(GenotypeData, OneLinePerSNPData):
                 exe['cut'], field['chrom'], field['rs']))
         cmd += " | perl -pe 's/ /\t/g' | %s - %s %s > %s" % (
             exe['paste'], cM_file, bp_alleles_file, self.basename + '.map')
-        execute(cmd, 'cut-gen2map-2')
+        execute(cmd, 'cut-gen2map-2', allow_sge = self.numsnps > settings.sge_min_numsnps)
+        log('Created map ')
 
     def count_numsnps(self):
         return count_lines(self.mapfile())
 
     def get_snpids(self):
+        log('Reading SNP ids from %s file' % self.format)
         tempfile = temp_filename()
         cmd = self.with_input_from_genofile("%s -d' ' -f %d > %s" % (
                 exe['cut'], gencol['snpid'], tempfile))
-        execute(cmd, name = 'get_snpids')
+        execute(cmd, name = 'get_snpids', allow_sge = self.numsnps > settings.sge_min_numsnps)
         return read_lines(tempfile)
 
     def count_numindivs(self):
@@ -754,6 +757,9 @@ class ShellFish(CommandLineApp):
         op.add_option('', '--ignore-sge', dest='ignore_sge', default=False, action='store_true',
                       help="Don't use Sun Grid Engine for computations even though it is available")
 
+        op.add_option('', '--sge-min-numsnps', dest='sge_min_numsnps', default=1000, type='int',
+                      help="Maximum number of SNPs allowed for local process when SGE is available")
+
         op.add_option('', '--version', dest='show_version', default=False, action='store_true',
                       help="Print version and exit")
         
@@ -764,6 +770,9 @@ class ShellFish(CommandLineApp):
         global settings
         settings = self.options
         self.sanity_check()
+        log(datetimenow(), timestamp=False)
+        log('shellfish version %s' % __version__, timestamp=False)
+        # log("\n%s %s\n" % self.option_parser.parse_args(), timestamp = False)
 
         # This is a fucking mess.
 
@@ -1025,10 +1034,10 @@ class ShellFish(CommandLineApp):
         raise
 
 
-def execute(cmd, name):
+def execute(cmd, name, allow_sge=True):
     """Execute command, perhaps by submitting job to SGE, but in any
     case block until execution terminates."""
-    if settings.sge:
+    if settings.sge and allow_sge:
         name += '-%s' % os.getpid()
         SGEprocess(settings.sge_preamble + cmd,
                    name = name,
@@ -1077,6 +1086,11 @@ def snptest(cases, controls):
     for p in range(numprocs):
         xsnps = [snpids[l] for l in range(numsnps) if not inchunk(l, chunks[p])]
         write_lines(xsnps, xsnp_files[p])
+
+    log('Performing association tests using %d parallel process%s' %
+        (numprocs, 'es' if numprocs > 1 else ''))
+    if settings.sge:
+        log('SGE scripts and output are in %s' % settings.sgedir)
 
     outfiles = pmap(snptest_chunk_command, xsnp_files, 'snptest')
 
@@ -1253,9 +1267,11 @@ def submatrices(n, maxprocs):
             for i in range(len(lim))
             for j in range(len(lim)) if j <= i]
 
-def log(msg, prefix=''):
+def log(msg, timestamp=True):
     if not settings.quiet:
-        sys.stdout.write(prefix + msg)
+        if msg[-1] != '\n': msg += '\n'
+        if timestamp: msg = timenow() + '\t' + msg
+        sys.stdout.write(msg)
         sys.stdout.flush()
 
 if __name__ == '__main__':
