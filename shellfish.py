@@ -1074,7 +1074,7 @@ def snptest(cases, controls):
             cmd += '-exclude_samples %s ' % settings.exclude_indivs_file
         if settings.snptest_chunk:
             cmd += '-chunk %d ' % settings.snptest_chunk
-        cmd += '> /dev/null'
+        # cmd += '> /dev/null'
         return cmd
 
     snpids = cases.get_snpids()
