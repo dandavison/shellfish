@@ -153,12 +153,12 @@ class SNPLoadData(OneLinePerSNPData):
         if not isinstance(data, GenoData):
             raise ShellFishError('Error: project: data should be in .geno format at this stage.')
         
-        evecs_file = temp_filename()
+        evecsfile = temp_filename()
         log('extract eigen vectors from SNP loadings file')
         system('%s -f %d-%d < %s > %s' % 
                (exe['cut'],
                 mapcol['pc1'], mapcol['pc1'] + settings.numpcs - 1,
-                self.mapfile(), evecs_file))
+                self.mapfile(), evecsfile))
         
         freq_file = temp_filename()
         log('extract frequencies from SNP loadings file')
@@ -171,7 +171,7 @@ class SNPLoadData(OneLinePerSNPData):
         cmd = '%s %s -g %s -e %s -f %s -o %s -a %d -b %d -L %d -N %d -v %d' % (
             exe['project'],
             '-s' if not settings.no_rescale else '',
-            data.genofile(), evecs_file, freq_file, self.proj_file,
+            data.genofile(), evecsfile, freq_file, self.proj_file,
             1, data.numsnps, data.numsnps,
             data.numindivs, settings.numpcs)
         if settings.sge:
