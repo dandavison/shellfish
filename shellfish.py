@@ -865,7 +865,7 @@ class ShellFish(CommandLineApp):
             system("mv %s %s" % (data.evalsfile, out_basename + '.evals'))
         elif settings.snpload:
             data = data.to_geno()
-            if not isfile(settings.evecs_file):
+            if not isfile(settings.evecsfile):
                 raise ShellfishError('Invalid file: %s' % settings.evecsfile)
             data.compute_snploadings()
             system("mv %s %s" % (data.snpload_file, out_basename + '.snpload'))
