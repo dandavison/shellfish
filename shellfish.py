@@ -1038,23 +1038,9 @@ def set_executables(cmds):
                     % cmd)
         
 def temp_filename():
-    # time.strftime(time.ctime()).replace(' ', '_')
     return os.path.join(temp_storage_dir(), str(random.random())[2:])
 
 def temp_storage_dir():
-    # if not settings.wtchg:
-    #     tempdir = '/tmp/%s-temp-storage' % __progname__
-    # else:
-    #     if settings.sge:
-    #         # On the cluster, use current dir as temp storage. I
-    #         # should go through the code and make sure that no
-    #         # computational steps leave necessary data hanging around
-    #         # in temp storage. If that's true then the cluster nodes
-    #         # could use /tmp or /scratch for temp storage.
-    #         tempdir = '%s-temp' % __progname__
-    #     else:
-    #         tempdir = '/data/oak/user/davison/%s-temp-storage' % __progname__
-
     tempdir = '%s-temp' % __progname__
     tempdir += '-' + str(os.getpid())
     mkdirp(tempdir)
