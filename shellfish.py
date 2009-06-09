@@ -906,7 +906,9 @@ class ShellFish(CommandLineApp):
         set_executables(['lines', 'match', 'columns', 'columns-split'])
         set_executables(['sstat', 'flipind','flipgen', 'flipgeno', 'gen2geno', 'geno2gen'])
         if settings.pca:
-            set_executables(['genocov', 'coveigen', 'snpload'])
+            set_executables(['genocov', 'coveigen'])
+        if settings.snpload:
+            set_executables(['snpload'])
         if settings.project:
             set_executables(['project'])
 
