@@ -377,7 +377,7 @@ class GenoData(GenotypeData, OneLinePerSNPData):
                  self.numindivs, settings.numpcs, self.numsnps,
                  self.genofile(), settings.evecsfile, freqfile, outfile_basename)
         
-        if settings.sge
+        if settings.sge:
             def make_sge_process(i):
                 cmd = settings.sge_preamble + '\n' + snpload_chunk_command(i)
                 return SGEprocess(
@@ -392,7 +392,7 @@ class GenoData(GenotypeData, OneLinePerSNPData):
                 system(snpload_chunk_command(i))
             procs = [Process(target=compute_chunk, args=(i,)) for i in range(settings.maxprocs)]
 
-                log('Computing covariance matrix using %d parallel process%s' %
+        log('Computing covariance matrix using %d parallel process%s' %
             (len(procs), 'es' if len(procs) > 1 else ''))
 
         for p in procs: p.start()
