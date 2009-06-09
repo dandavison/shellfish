@@ -663,7 +663,6 @@ class ShellFishError(Exception):
     def __str__(self):
         return repr(self.value)
 
-
 class ShellFishLinkError(ShellFishError):
     def __init__(self, target, link):
         self.value = ('Trying to create link to original data file %s, '
@@ -1042,10 +1041,10 @@ def set_executables(cmds):
         else:
             print(repr(exit_status))
             raise ShellFishError(
-                "The command 'which %s' exited with code %d:" % (cmd, exit_status) + 
-                " please ensure that the program '%s' is present in the" +
-                " current directory (or on your $PATH)."\
-                    % cmd)
+                "The command 'which %s' exited with code %d:"
+                " please ensure that the program '%s' is present in the"
+                " current directory (or on your $PATH)." \
+                    % (cmd, exit_status, cmd))
         
 def temp_filename():
     return os.path.join(temp_storage_dir(), str(random.random())[2:])
