@@ -386,10 +386,18 @@ class GenoData(GenotypeData, OneLinePerSNPData):
         system("%s -n %d < %s > %s" %
                (exe['sstat'], self.numindivs, self.genofile(), freqfile))
         snpload_file = temp_filename()
-        system("%s -a %d -b %d -N %d -v %d -L %d -g %s -e %s -f %s -o %s" % 
-               (exe['snpload'], 1, self.numsnps,
-                self.numindivs, settings.numpcs, self.numsnps,
-                self.genofile(), settings.evecsfile, freqfile, snpload_file))
+        cmd = "%s -a %d -b %d -N %d -v %d -L %d -g %s -e %s -f %s -o %s" % \
+            (exe['snpload'], 1, self.numsnps,
+             self.numindivs, settings.numpcs, self.numsnps,
+             self.genofile(), settings.evecsfile, freqfile, snpload_file)
+        if settings.sge:
+            cmd = settings.sge_preamble + '\n' + cmd
+            SGEprocess(cmd,
+                       name = 'snpload-%s' % os.getpid(),
+                       directory = settings.sgedir,
+                       priority=settings.sge_level).execute_in_serial()
+        else:
+            system(cmd)
         snpload_file += '-1-%d' % self.numsnps
         if not isfile(snpload_file):
             raise ShellFishError('After snpload: expecting file %s to exist' & snpload_file)
