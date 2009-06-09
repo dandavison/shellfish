@@ -314,8 +314,7 @@ class GenoData(GenotypeData, OneLinePerSNPData):
         if settings.sge:
             def make_sge_process(i):
                 cmd = submatrix_cmd(i)
-                if settings.wtchg:
-                    cmd = settings.sge_preamble + '\n' + cmd
+                cmd = settings.sge_preamble + '\n' + cmd
                 return SGEprocess(
                     command=cmd,
                     name = '-'.join(['genocov', str(os.getpid()), "%03d" % i]),
@@ -385,25 +384,73 @@ class GenoData(GenotypeData, OneLinePerSNPData):
         freqfile = temp_filename()
         system("%s -n %d < %s > %s" %
                (exe['sstat'], self.numindivs, self.genofile(), freqfile))
-        snpload_file = temp_filename()
-        cmd = "%s -a %d -b %d -N %d -v %d -L %d -g %s -e %s -f %s -o %s" % \
-            (exe['snpload'], 1, self.numsnps,
-             self.numindivs, settings.numpcs, self.numsnps,
-             self.genofile(), settings.evecsfile, freqfile, snpload_file)
+
+
+        L = self.numsnps
+        p = settings.maxprocs
+        chunksizes = [L/p] * p
+        for i in range(L % p): chunksizes[i] += 1
+        ends = cumsum(chunksizes)
+        starts = [1] + ends[:-1]
+        chunks = zip(starts, ends)
+
+        outdir = temp_filename()
+        os.mkdir(outdir)
+        outfile_basename = os.path.join(outdir, 'snpload')
+        
+        def snpload_chunk_command(i):
+            return "%s -a %d -b %d -N %d -v %d -L %d -g %s -e %s -f %s -o %s" % \
+                (exe['snpload'], chunks[i][0], chunks[i][1],
+                 self.numindivs, settings.numpcs, self.numsnps,
+                 self.genofile(), settings.evecsfile, freqfile, outfile_basename)
+        
+        if settings.sge
+            def make_sge_process(i):
+                cmd = settings.sge_preamble + '\n' + snpload_chunk_command(i)
+                return SGEprocess(
+                    command=cmd,
+                    name = '-'.join(['snpload', str(os.getpid()), "%03d" % i]),
+                    directory = settings.sgedir,
+                    priority=settings.sge_level,
+                    nslots = 1)
+            procs = map(make_sge_process, range(settings.maxprocs))
+        else:
+            def compute_chunk(i):
+                system(snpload_chunk_command(i))
+            procs = [Process(target=compute_chunk, args=(i,)) for i in range(settings.maxprocs)]
+
+                log('Computing covariance matrix using %d parallel process%s' %
+            (len(procs), 'es' if len(procs) > 1 else ''))
+
+        for p in procs: p.start()
+        done = set([])
+        interval = 10
+        i = 0
+        while True:
+            done_now = set(which([not p.is_alive() for p in procs]))
+            if not i % (60/interval) and len(done_now):
+                log('%s\t%s/%s processes finished' % (timenow(), len(done_now), len(procs)))
+            for p in done_now.difference(done):
+                if procs[p].exitcode != 0:
+                    raise ShellFishError('snpload process %d had non-zero exit status' % p)
+                outfile = outfile_basename + '-%d-%d' % chunks[p]
+                if not isfile(outfile):
+                    raise ShellFishError('After snpload: expecting file %s to exist' % snpload_file)
+            if len(done_now) == len(procs):
+                break
+            done = done_now
+            time.sleep(interval)
+        log("All snpload processes finished: concatenating snpload chunks.")
+        self.snpload_file = temp_filename()
+        cmd = "find %s -type f | sort | xargs cat | paste %s - > %s" % (outdir, self.mapfile(), self.snpload_file)
         if settings.sge:
-            cmd = settings.sge_preamble + '\n' + cmd
             SGEprocess(cmd,
-                       name = 'snpload-%s' % os.getpid(),
+                       name = 'snpload-cat-%s' % os.getpid(),
                        directory = settings.sgedir,
                        priority=settings.sge_level).execute_in_serial()
         else:
             system(cmd)
-        snpload_file += '-1-%d' % self.numsnps
-        if not isfile(snpload_file):
-            raise ShellFishError('After snpload: expecting file %s to exist' & snpload_file)
-        self.snpload_file = temp_filename()
-        system("paste %s %s > %s" % (self.mapfile(), snpload_file, self.snpload_file))
-            
+
 class GenData(GenotypeData, OneLinePerSNPData):
     """A class for data sets in the .gen format created by chiamo and
     used by other related software."""
@@ -998,6 +1045,7 @@ class ShellFish(CommandLineApp):
         if not settings.messy:
             self.cleanup()
         raise
+
 
 
 def restrict_to_intersection(data_objects):
