@@ -12,11 +12,13 @@ except:
     __have_multiprocessing__ = False
     from process import Process
 
-
-__version__ = '0.0.3'
+__version__ = '0.0.4'
 __progname__ = 'shellfish'
+# Global dict specifying the order of columns in .map files
 mapcol = dict(chrom=1, rs=2, cM=3, bp=4, allele1=5, allele2=6, freq=7, pc1=8)
+# and in .gen files
 gencol = dict(snpid=1, rs=2, bp=3, allele1=4, allele5=5)
+# a global dict which will be populated with paths to executables
 exe = {}
 
 class Data(object):
@@ -98,7 +100,7 @@ class Data(object):
 
     def create_links(self):
         old_mapfile = self.mapfile()
-        self.basename = temp_filename() # os.path.basename(self.basename) + '_'
+        self.basename = temp_filename()
         link(old_mapfile, self.mapfile())
 
 class GenotypeData(Data):
@@ -117,9 +119,10 @@ class GenotypeData(Data):
 
         self.numindivs = self.count_numindivs()
         if settings.numindivs and settings.numindivs != self.numindivs:
-            raise ShellFishError("Number of individuals asserted on command-line (%d) doesn't match" +
-                                 "number of individuals (%s) from inspection of genotype file" % 
-                                 (settings.numindivs, self.numindivs))
+            raise ShellFishError(
+                "Number of individuals asserted on command-line (%d) doesn't match" +
+                "number of individuals (%s) from inspection of genotype file" % 
+                (settings.numindivs, self.numindivs))
 
     def genofile(self):
         return self.basename + self.format
@@ -127,7 +130,7 @@ class GenotypeData(Data):
     def create_links(self):
         old_mapfile = self.mapfile()
         old_genofile = self.genofile()
-        self.basename = temp_filename() #os.path.basename(self.basename) + '_'
+        self.basename = temp_filename()
         link(old_mapfile, self.mapfile())
         link(old_genofile, self.genofile())
         
@@ -186,8 +189,7 @@ class SNPLoadData(OneLinePerSNPData):
 
     def flip_mapfile(self, target):
         raise ShellFishError(
-            'Flipping SNPLoadData not implemented (would have to alter frequencies and SNP loadings)')
-    
+            'Flipping SNPLoadData not implemented (would have to alter frequencies and loadings)')
 
 class GenoData(GenotypeData, OneLinePerSNPData):
     """A class for data sets kept in the .geno format used by Dan's
@@ -217,7 +219,8 @@ class GenoData(GenotypeData, OneLinePerSNPData):
         if count_columns(self.mapfile()) >= 6: # have allele info in mapfile
             system("%s -f %d,%d,%d,%d,%d < %s | %s -pe 's/\t/ /g' > %s" % (
                     exe['cut'],
-                    mapcol['chrom'], mapcol['rs'], mapcol['bp'], mapcol['allele1'], mapcol['allele2'],
+                    mapcol['chrom'], mapcol['rs'], mapcol['bp'],
+                    mapcol['allele1'], mapcol['allele2'],
                     self.mapfile(),
                     exe['perl'],
                     genmapfile))
@@ -519,7 +522,7 @@ class GenData(GenotypeData, OneLinePerSNPData):
     def create_links(self):
         old_genofile = self.genofile()
         old_samplefile = self.samplefile(wtchg=settings.wtchg)
-        self.basename = temp_filename() ## os.path.basename(self.basename) + '_'
+        self.basename = temp_filename()
         link(old_genofile, self.genofile())
         link(old_samplefile, self.samplefile())
 
@@ -601,9 +604,11 @@ class BedData(GenotypeData):
     def __init__(self, basename):
         GenotypeData.__init__(self, basename, '.bed')
         if not isfile(self.mapfile()):
-            ShellFishError("Binary ped file %s is missing associated binary map file %s." % self.mapfile())
+            ShellFishError("Binary ped file %s is missing associated binary map file %s." \
+                               % self.mapfile())
         if not isfile(self.famfile()):
-            ShellFishError("Binary ped file %s is missing associated .fam file %s." % self.famfile())
+            ShellFishError("Binary ped file %s is missing associated .fam file %s." \
+                               % self.famfile())
 
     def to_bed(self):
         return self
@@ -638,7 +643,7 @@ class BedData(GenotypeData):
         old_genofile = self.genofile()
         old_mapfile = self.mapfile()
         old_famfile = self.famfile()
-        self.basename = temp_filename()  #os.path.basename(self.basename) + '_'
+        self.basename = temp_filename()
         link(old_genofile, self.genofile())
         link(old_mapfile, self.mapfile())
         link(old_famfile, self.famfile())
@@ -660,7 +665,6 @@ class ShellFishLinkError(ShellFishError):
 class ShellFish(CommandLineApp):
     data_classes = dict(zip(['.gen', '.gen.gz', '.geno', '.ped', '.bed'],
                             [GenData, GenGzData, GenoData, PedData, BedData]))
-    # Global dict specifying the order of columns in .map files
 
     def __init__(self):
         CommandLineApp.__init__(self)
@@ -770,8 +774,6 @@ class ShellFish(CommandLineApp):
         global settings
         settings = self.options
         self.sanity_check()
-        # with codecs.open(settings.logfile, 'w', 'utf-8') as f:
-        #     f.write('shellfish v%s\n%s\n' % (__version__, time.ctime()))
 
         basename, format = self.process_input_files(settings.file1)
         if format is None:
@@ -820,7 +822,6 @@ class ShellFish(CommandLineApp):
                         (data.mapfile(), data2.mapfile()))
             log('Data files agree with respect to SNPs and allele encoding')
 
-        # out_basename = os.path.basename(settings.file1)
         out_basename = settings.outfile
 
         if settings.make_geno:
@@ -866,7 +867,6 @@ class ShellFish(CommandLineApp):
             log('Projecting %s onto %d principal components in %s\n' % 
                 (data.basename, settings.numpcs, data2.basename))
             data2.project(data)
-            # out_basename = os.path.basename(file1_basename) + '-' os.path.basename(settings.file2)
             system("mv %s %s" % (data2.proj_file, out_basename + '.proj'))
         else:
             raise NotImplementedError(available_actions_msg)
@@ -879,8 +879,9 @@ class ShellFish(CommandLineApp):
             raise ShellFishError('Are you using Windows? %s lives only on linux / unix / OS X.' %
                                  __progname__)
         if not settings.file1:
-            raise ShellFishError('No genotype file supplied. Use %s --help to see available options.' %
-                                 __progname__)
+            raise ShellFishError(
+                'No genotype file supplied. Use %s --help to see available options.' \
+                    % __progname__)
 
         available_actions_msg = ("Please use one of the following options: "
                                  "--pca "
@@ -926,9 +927,6 @@ class ShellFish(CommandLineApp):
             settings.wtchg = True
             settings.sge_preamble = 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/users/davison/lib64'
             SGEprocess.verbose = settings.verbose
-        # settings.file1 = os.path.abspath(settings.file1)
-        # settings.file2 = os.path.abspath(settings.file2)
-
 
     def process_input_files(self, path):
         '''Determine the basename, and whether or not a genotype file
@@ -950,7 +948,8 @@ class ShellFish(CommandLineApp):
             nvalid = filter(None, isvalid)
             if len(nvalid) > 1:
                 raise ShellFishError(
-                    'Found more than one genotype file format corresponding to basename %s' % basename)
+                    'Found more than one genotype file format corresponding to basename %s' \
+                        % basename)
             else:
                 format = self.data_classes.keys()[which(isvalid)[0]]
         else:
@@ -1034,7 +1033,8 @@ def set_executables(cmds):
             print(repr(exit_status))
             raise ShellFishError(
                 "The command 'which %s' exited with code %d:" % (cmd, exit_status) + 
-                " please ensure that the program '%s' is present in the current directory (or on your $PATH)."\
+                " please ensure that the program '%s' is present in the" +
+                " current directory (or on your $PATH)."\
                     % cmd)
         
 def temp_filename():
