@@ -340,9 +340,8 @@ class GenoData(GenotypeData, OneLinePerSNPData):
             if not i % (60/interval) and len(done_now):
                 log('%s\t%s/%s processes finished' % (timenow(), len(done_now), len(procs)))
             for i in done_now.difference(done):
-                if procs[i].exit_status() != 0:
-                    raise ShellFishError('genocov cluster job produced error output: %s' % 
-                                         procs[i].errfile)
+                if procs[i].exitcode != 0:
+                    raise ShellFishError('genocov process %d had non-zero exit status' % i)
             if len(done_now) == len(procs):
                 break
             done = done_now
@@ -811,19 +810,13 @@ class ShellFish(CommandLineApp):
                 
             # If we're doing anything with data2, we're going to want to subset and flip
             data = data.to_geno()
-            # if isinstance(data2, GenotypeData):
-            #     data2 = data2.to_geno()
-            # log('\nRestrict %s to SNP-wise intersection with %s\n' % (data.basename, data2.basename))
-            # data.restrict_to_intersection(data2)
-            # log('\nRestrict %s to SNP-wise intersection with %s\n' % (data2.basename, data.basename))
-            # data2.restrict_to_intersection(data)
             restrict_to_intersection([data, data2])
             log('\nFlipping %s to match encoding of %s\n' % (data.basename, data2.basename))
             data.flip(data2)
             if not data.is_aligned(data2):
                 raise ShellFishError(
-                    'After subsetting and flipping, map files %s and %s differ with respect to SNPs' + \
-                        'and/or allele encoding.' % \
+                    'After subsetting and flipping, map files %s and %s differ'+\
+                        'with respect to SNPs and/or allele encoding.' % \
                         (data.mapfile(), data2.mapfile()))
             log('Data files agree with respect to SNPs and allele encoding')
 
