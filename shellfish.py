@@ -177,15 +177,7 @@ class SNPLoadData(OneLinePerSNPData):
             data.genofile(), evecsfile, freq_file, self.proj_file,
             1, data.numsnps, data.numsnps,
             data.numindivs, settings.numpcs)
-        if settings.sge:
-            cmd = settings.sge_preamble + '\n' + cmd
-            SGEprocess(cmd,
-                       name = 'project-%s' % os.getpid(),
-                       directory = settings.sgedir,
-                       priority=settings.sge_level).execute_in_serial()
-        else:
-            system(cmd)
-        
+        execute(cmd, name = 'project-%s' % os.getpid())
 
     def flip_mapfile(self, target):
         raise ShellFishError(
@@ -283,13 +275,7 @@ class GenoData(GenotypeData, OneLinePerSNPData):
             log('Splitting data: storing individual data files in %s' % self.split_data_dir)
         cmd = "%s -q -n %d -o %s < %s" % (
             exe['columns-split'], self.numsnps, self.split_data_dir, self.genofile())
-        if settings.sge:
-            SGEprocess(cmd,
-                       name = 'columns-split-%s' % os.getpid(),
-                       directory = settings.sgedir,
-                       priority=settings.sge_level).execute_in_serial()
-        else:
-            system(cmd)
+        execute(cmd, name = 'columns-split-%s' % os.getpid())
         
     def compute_covariance_matrix(self):
         """Carry out PCA of the matrix of genotype data."""
@@ -351,14 +337,8 @@ class GenoData(GenotypeData, OneLinePerSNPData):
         log("All covariance matrix computation processes finished")
         log("Concatenating covariance matrix fragments")
         self.covfile = temp_filename()
-        cmd = "find %s -type f | sort | xargs cat > %s" % (outdir, self.covfile)
-        if settings.sge:
-            SGEprocess(cmd,
-                       name = 'genocov-cat-%s' % os.getpid(),
-                       directory = settings.sgedir,
-                       priority=settings.sge_level).execute_in_serial()
-        else:
-            system(cmd)
+        execute("find %s -type f | sort | xargs cat > %s" % (outdir, self.covfile),
+                name = 'genocov-cat-%s' % os.getpid())
         
     def compute_eigenvectors(self):
         if not settings.quiet:
@@ -367,14 +347,7 @@ class GenoData(GenotypeData, OneLinePerSNPData):
         os.mkdir(outdir)
         cmd = "%s -v -n %d -V %d -g %s -o %s" % (
             exe['coveigen'], self.numindivs, settings.numpcs, self.covfile, outdir)
-        if settings.sge:
-            cmd = settings.sge_preamble + '\n' + cmd
-            SGEprocess(cmd,
-                       name = 'coveigen-%s' % os.getpid(),
-                       directory = settings.sgedir,
-                       priority=settings.sge_level).execute_in_serial()
-        else:
-            system(cmd)
+        execute(cmd, name = 'coveigen-%s' % os.getpid())
         self.evecsfile = os.path.join(outdir, 'evecs')
         self.evalsfile = os.path.join(outdir, 'evals')
 
@@ -442,14 +415,9 @@ class GenoData(GenotypeData, OneLinePerSNPData):
             time.sleep(interval)
         log("All snpload processes finished: concatenating snpload chunks.")
         self.snpload_file = temp_filename()
-        cmd = "find %s -type f | sort | xargs cat | paste %s - > %s" % (outdir, self.mapfile(), self.snpload_file)
-        if settings.sge:
-            SGEprocess(cmd,
-                       name = 'snpload-cat-%s' % os.getpid(),
-                       directory = settings.sgedir,
-                       priority=settings.sge_level).execute_in_serial()
-        else:
-            system(cmd)
+        execute("find %s -type f | sort | xargs cat | paste %s - > %s" % \
+                    (outdir, self.mapfile(), self.snpload_file),
+                name='snpload-cat-%s' % os.getpid())
 
 class GenData(GenotypeData, OneLinePerSNPData):
     """A class for data sets in the .gen format created by chiamo and
@@ -530,14 +498,7 @@ class GenData(GenotypeData, OneLinePerSNPData):
                 self.genofile(),
                 exe['gen2geno'], settings.threshold, self.numindivs,
                 self.basename + '.geno')
-        if settings.sge:
-            SGEprocess(cmd,
-                       name = 'gen2geno-%s' % os.getpid(),
-                       directory = settings.sgedir,
-                       priority=settings.sge_level).execute_in_serial()
-        else:
-            system(cmd)
-
+        execute(cmd, name = 'gen2geno-%s' % os.getpid())
         if not settings.messy:
             system('%s %s %s' % (exe['rm'], self.genofile(), self.samplefile()))
         return GenoData(self.basename)
@@ -983,6 +944,8 @@ class ShellFish(CommandLineApp):
             settings.wtchg = True
             settings.sge_preamble = 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/users/davison/lib64'
             SGEprocess.verbose = settings.verbose
+        else:
+            settings.sge_preamble = None
 
     def process_input_files(self, path):
         '''Determine the basename, and whether or not a genotype file
@@ -1047,6 +1010,16 @@ class ShellFish(CommandLineApp):
         raise
 
 
+def execute(cmd, name):
+    """Execute command, perhaps by submitting job to SGE, but in any
+    case block until execution terminates."""
+    if settings.sge:
+        SGEprocess(settings.sge_preamble + '\n' + cmd,
+                   name = name,
+                   directory = settings.sgedir,
+                   priority=settings.sge_level).execute_in_serial()
+    else:
+        system(cmd)
 
 def restrict_to_intersection(data_objects):
     mapfiles = [data.mapfile() for data in data_objects]
