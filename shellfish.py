@@ -389,7 +389,7 @@ class GenoData(GenotypeData, OneLinePerSNPData):
         system("%s -a %d -b %d -N %d -v %d -L %d -g %s -e %s -f %s -o %s" % 
                (exe['snpload'], 1, self.numsnps,
                 self.numindivs, settings.numpcs, self.numsnps,
-                self.genofile(), settings.evecsfile, freqfile, self.snpload_file))
+                self.genofile(), settings.evecsfile, freqfile, snpload_file))
         snpload_file += '-1-%d' % self.numsnps
         if not isfile(snpload_file):
             raise ShellFishError('After snpload: expecting file %s to exist' & snpload_file)
