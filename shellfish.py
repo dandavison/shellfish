@@ -358,13 +358,12 @@ class GenoData(GenotypeData, OneLinePerSNPData):
         system("%s -n %d < %s > %s" %
                (exe['sstat'], self.numindivs, self.genofile(), freqfile))
 
-
         L = self.numsnps
         p = settings.maxprocs
         chunksizes = [L/p] * p
         for i in range(L % p): chunksizes[i] += 1
         ends = cumsum(chunksizes)
-        starts = [1] + ends[:-1]
+        starts = [e+1 for e in [0] + ends[:-1]]
         chunks = zip(starts, ends)
 
         outdir = temp_filename()
@@ -392,7 +391,7 @@ class GenoData(GenotypeData, OneLinePerSNPData):
                 system(snpload_chunk_command(i))
             procs = [Process(target=compute_chunk, args=(i,)) for i in range(settings.maxprocs)]
 
-        log('Computing covariance matrix using %d parallel process%s' %
+        log('Computing SNP loadings using %d parallel process%s' %
             (len(procs), 'es' if len(procs) > 1 else ''))
 
         for p in procs: p.start()
