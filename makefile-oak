@@ -1,0 +1,38 @@
+IDIR = "."
+CPPFLAGS = -I $(IDIR)
+CFLAGS = -O2 # -Wall
+LDFLAGS = -lm
+
+ifeq (oak,$(HOSTNAME))
+LDIR = lib64
+SYS_LDIR = /usr/lib
+LA_LIBS = $(SYS_LDIR)/libblas.so $(SYS_LDIR)/liblapack.so -llapack $(LDIR)/libcblas.a -lg2c
+# endif
+# ifeq (login1-cluster1,$(HOSTNAME))
+# LDIR = lib64
+# SYS_LDIR = /usr/local/lib64
+# LA_LIBS = $(SYS_LDIR)/libblas.so $(LDIR)/liblapack.a -llapack $(LDIR)/libcblas.a -lg2c
+# endif
+else
+  LDIR = lib
+  LA_LIBS = -lblas -llapack $(LDIR)/libcblas.a
+endif
+
+GENO_OBJS = io.o iogeno.o dan.o
+GENO_EXECS = sstat istat flipind flipgen flipgeno gen2geno geno2gen
+LA_EXECS = coveigen genocov snpload project # use linear algebra libraries
+EXECS = lines columns columns-split $(GENO_EXECS) $(LA_EXECS)
+
+all:		$(EXECS)
+		cp $(EXECS) ..
+
+$(GENO_EXECS):	$(GENO_OBJS)
+$(LA_EXECS):	$(GENO_OBJS) blas-lapack-dan.o $(LA_LIBS)
+
+## The following obscure syntax is required because io-templates.c is #included
+io.o:		io.c io-templates.c io.h
+		$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
+
+clean:		
+		rm -f *.o $(EXECS)
+		cd .. && rm -f $(EXECS)

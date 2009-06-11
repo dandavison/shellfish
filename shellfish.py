@@ -781,6 +781,9 @@ class ShellFish(CommandLineApp):
         op.add_option('', '--sge-level', dest='sge_level', default=1, type='int',
                       help="Job priority level for Sun Grid Engine submissions")
         
+        op.add_option('', '--ignore-sge', dest='ignore_sge', default=False, action='store_true',
+                      help="Don't Use Sun Grid Engine for computations even though it is available.")
+
         op.add_option('-w', '--wtchg', dest='wtchg', default=False, action='store_true',
                       help="activate wtchg file naming conventions")
         
@@ -892,6 +895,7 @@ class ShellFish(CommandLineApp):
         if os.name != 'posix':
             raise ShellFishError('Are you using Windows? %s lives only on linux / unix / OS X.' %
                                  __progname__)
+
         if not settings.file1:
             raise ShellFishError(
                 'No genotype file supplied. Use %s --help to see available options.' \
@@ -938,13 +942,27 @@ class ShellFish(CommandLineApp):
             raise ShellFishError(
                 'Use the --numpcs option to specify the number of principal coordinates')
 
+        if os.popen('hostname').read().rstrip() in ['login1-cluster1','login2-cluster1']:
+            sge_preamble = 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/users/davison/lib64'
+        else:
+            sge_preamble = ''
         if settings.sge:
             settings.sgedir = 'shellfish-cluster-jobs-' + datetimenow()
             settings.wtchg = True
-            settings.sge_preamble = 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/users/davison/lib64'
             SGEprocess.verbose = settings.verbose
+            settings.sge_preamble = sge_preamble
         else:
-            settings.sge_preamble = None
+            settings.sge_preamble = ''
+
+        have_qsub = system('which qsub > /dev/null 2>&1', [0, 256]) == 0
+        have_qstat = system('which qstat > /dev/null 2>&1', [0, 256]) == 0
+        if have_qsub and have_qstat and not settings.sge and not settings.ignore_sge:
+            raise ShellFishError("It looks like you're on a compute cluster running the Sun Grid Engine: " +\
+                                     "you should use the --sge option. If you really want to not use SGE and "+\
+                                     "use this machine's processors for " +\
+                                     "the computations then supply the --ignore-sge option.")
+        elif settings.ignore_sge:
+            system(sge_preamble)
 
     def process_input_files(self, path):
         '''Determine the basename, and whether or not a genotype file
