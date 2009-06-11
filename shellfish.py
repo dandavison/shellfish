@@ -171,7 +171,7 @@ class SNPLoadData(OneLinePerSNPData):
         
         self.proj_file = temp_filename()
         log('project genotype data: output file is %s' % self.proj_file)
-        cmd = '%s %s -g %s -e %s -f %s -o %s -a %d -b %d -L %d -N %d -v %d' % (
+        cmd = '%s %s -g %s -e %s -f %s -o %s -a %d -b %d -L %d -N %d -V %d' % (
             exe['project'],
             '-s' if not settings.no_rescale else '',
             data.genofile(), evecsfile, freq_file, self.proj_file,

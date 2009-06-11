@@ -28,16 +28,14 @@
 */
 
 
-#define VERBOSE 0
-
 int main(int argc, char *argv[]) {
     int c, n_tot, n_inc, nvecs, a, b, L_inc, L_tot, l, i ;
     char *geno_file, *evec_file, *freq_file, *outfile ; //, outfile[250] ;
     double *v, *x, *xx, *y, *freq ;
-    bool *snp_include, *indiv_include, *evec_include, rescale=FALSE ;
+    bool *snp_include, *indiv_include, *evec_include, rescale=FALSE, verbose=false ;
     FILE *f ;
 
-    while((c = getopt(argc, argv, "a:b:N:v:L:g:e:f:o:s")) != -1) {
+    while((c = getopt(argc, argv, "a:b:N:V:L:g:e:f:o:sv")) != -1) {
 	switch(c) {
 	case 'a':
 	    a = atoi(optarg) - 1; break ;
@@ -45,7 +43,7 @@ int main(int argc, char *argv[]) {
 	    b = atoi(optarg) ; break ;
 	case 'N':
 	    n_tot = atoi(optarg) ; break ;
-	case 'v':
+	case 'V':
 	    nvecs = atoi(optarg) ; break ;
 	case 'L':
 	    L_tot = atoi(optarg) ; break ;
@@ -59,6 +57,8 @@ int main(int argc, char *argv[]) {
 	    outfile = optarg ; break ;
 	case 's':
 	    rescale = TRUE ; break ;
+	case 'v':
+	    verbose = true ; break ;
 	case '?':
 	    ERROR("Unrecognised option") ;
 	}
@@ -78,19 +78,21 @@ int main(int argc, char *argv[]) {
     }
     assert(L_inc == b - a) ;
         
-    PRINT("# %s\tComputing projection of genotype data into Principal Coordinate space\n",
-	  timestring()) ; fflush(stdout) ;
-    PRINT("# number of SNPs = %d\n", L_tot) ;
-    // PRINT("# [a,b) = [%d,%d) -> L_inc = %d\n", a, b, L_inc) ;
-    PRINT("# number of individuals = %d\n", n_tot) ;
-    // PRINT("n_inc = %d\n", n_inc) ;
-    PRINT("# number of PCs = %d\n", nvecs) ;
-    PRINT("# genotype data file = %s\n", geno_file) ;
-    PRINT("# Principal components file = %s\n", evec_file) ;
-    PRINT("# Allele frequency file = %s\n", freq_file) ;
-    // PRINT("outfile = %s\n", outfile) ;
+    if(verbose) {
+	PRINT("# %s\tComputing projection of genotype data into Principal Coordinate space\n",
+	      timestring()) ; fflush(stdout) ;
+	PRINT("# number of SNPs = %d\n", L_tot) ;
+	// PRINT("# [a,b) = [%d,%d) -> L_inc = %d\n", a, b, L_inc) ;
+	PRINT("# number of individuals = %d\n", n_tot) ;
+	// PRINT("n_inc = %d\n", n_inc) ;
+	PRINT("# number of PCs = %d\n", nvecs) ;
+	PRINT("# genotype data file = %s\n", geno_file) ;
+	PRINT("# Principal components file = %s\n", evec_file) ;
+	PRINT("# Allele frequency file = %s\n", freq_file) ;
+	// PRINT("outfile = %s\n", outfile) ;
+    }
     
-    if(VERBOSE)
+    if(verbose)
 	PRINT("%s\t/* Read eigenvectors */\n", timestring()) ; fflush(stdout) ;
     // v = nvecs x L_inc, column major
     v = ALLOC(L_inc * nvecs, double) ; // was nvecs * ninc in snpload.c
@@ -98,7 +100,7 @@ int main(int argc, char *argv[]) {
     read_submatrix_double(f, nvecs, evec_include, L_tot, snp_include,  "%lf", v) ; // differs from snpload.c
     fclose(f) ;
     
-    if(VERBOSE)
+    if(verbose)
 	PRINT("%s\t/* Read genotypes */\n", timestring()) ; fflush(stdout) ;
     // x is n_tot x L_inc, column major
     x = ALLOC(L_inc * n_inc, double) ;
@@ -106,20 +108,20 @@ int main(int argc, char *argv[]) {
     read_submatrix_genotypes_double(f, n_tot, indiv_include, L_tot, snp_include,  x) ;
     fclose(f) ;
 
-    if(VERBOSE) {
+    if(verbose) {
 	PRINT("%s\t/* First %d entries of genotypes x: */\n", timestring(), MIN(n_inc*nvecs, 100)) ;
 	for(i = 0 ; i < MIN(n_inc*nvecs, 100) ; i++) PRINT("%lf ", x[i]) ;
 	putchar('\n') ;
     }
 
-    if(VERBOSE)
+    if(verbose)
 	PRINT("%s\t/* Read freqs */\n", timestring()) ; fflush(stdout) ;
     freq = ALLOC(L_inc, double) ;
     f = fopen(freq_file, "r") ;
     read_submatrix_double(f, L_tot, snp_include, 1, NULL, "%lf", freq) ;
     fclose(f) ;
     
-    if(VERBOSE)
+    if(verbose)
 	PRINT("%s\t/* Set NAs to freq */\n", timestring()) ; fflush(stdout) ;
     xx = x ;
     for(l = 0 ; l < L_inc ; l++)
@@ -133,13 +135,13 @@ int main(int argc, char *argv[]) {
 	    }
 	    else if(*xx == MISSING) *xx = 2*freq[l] ;
 	}
-    if(VERBOSE) {
+    if(verbose) {
 	PRINT("%s\t/* First %d entries of freqs: */\n", timestring(), MIN(L_inc, 100)) ;
 	for(i = 0 ; i < MIN(L_inc, 100) ; i++) PRINT("%lf ", freq[i]) ;
 	putchar('\n') ;
     }
 
-    if(VERBOSE)
+    if(verbose)
 	PRINT("%s\t/* Compute projection */\n", timestring()) ; fflush(stdout) ;
 
     /* Now compute XV' which is n_tot x nvecs */
@@ -155,7 +157,7 @@ int main(int argc, char *argv[]) {
     FREE(v) ;
     FREE(x) ;
     FREE(freq) ;
-    PRINT("%s\t/* Done */\n", timestring()) ;
+    if(verbose) PRINT("%s\t/* Done */\n", timestring()) ;
 
     return 0 ;
 }
