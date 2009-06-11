@@ -371,7 +371,7 @@ class GenoData(GenotypeData, OneLinePerSNPData):
         outfile_basename = os.path.join(outdir, 'snpload')
         
         def snpload_chunk_command(i):
-            return "%s -a %d -b %d -N %d -v %d -L %d -g %s -e %s -f %s -o %s" % \
+            return "%s -a %d -b %d -N %d -V %d -L %d -g %s -e %s -f %s -o %s" % \
                 (exe['snpload'], chunks[i][0], chunks[i][1],
                  self.numindivs, settings.numpcs, self.numsnps,
                  self.genofile(), settings.evecsfile, freqfile, outfile_basename)

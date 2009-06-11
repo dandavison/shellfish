@@ -25,6 +25,8 @@
   V'X.
 */
 
+#define VERBOSE false
+
 int main(int argc, char *argv[]) {
     int c, n_tot, n_inc, nvecs, a, b, L_inc, L_tot, l, i ;
     char *geno_file, *evec_file, *freq_file, *outfile_partial, outfile[250] ;
@@ -32,7 +34,7 @@ int main(int argc, char *argv[]) {
     bool *snp_include, *indiv_include, *evec_include ;
     FILE *f ;
 
-    while((c = getopt(argc, argv, "a:b:N:v:L:g:e:f:o:")) != -1) {
+    while((c = getopt(argc, argv, "a:b:N:V:L:g:e:f:o:")) != -1) {
 	switch(c) {
 	case 'a':
 	    a = atoi(optarg) - 1; break ;
@@ -40,7 +42,7 @@ int main(int argc, char *argv[]) {
 	    b = atoi(optarg) ; break ;
 	case 'N':
 	    n_tot = atoi(optarg) ; break ;
-	case 'v':
+	case 'V':
 	    nvecs = atoi(optarg) ; break ;
 	case 'L':
 	    L_tot = atoi(optarg) ; break ;
@@ -70,7 +72,7 @@ int main(int argc, char *argv[]) {
 	if( snp_include[l] ) L_inc++ ;
     }
     assert(L_inc == b - a) ;
-        
+    
     PRINT("L_tot = %d\n", L_tot) ;
     PRINT("[a,b) = [%d,%d) -> L_inc = %d\n", a, b, L_inc) ;
     PRINT("n_tot = %d\n", n_tot) ;
@@ -85,14 +87,8 @@ int main(int argc, char *argv[]) {
     // v is n_tot x nvecs, column major
     v = ALLOC(nvecs * n_inc, double) ;
     f = fopen(evec_file, "r") ;
-
     read_submatrix_double(f, n_tot, indiv_include, nvecs, evec_include, "%lf", v) ;
-
     fclose(f) ;
-    
-    // PRINT("%s\t/* First %d entries of eigenvectors v: */\n", timestring(), MIN(n_inc*nvecs, 100)) ;
-    // for(i = 0 ; i < MIN(n_inc*nvecs, 100) ; i++) PRINT("%lf ", v[i]) ;
-    // putchar('\n') ;
     
     PRINT("%s\t/* Read genotypes */\n", timestring()) ; fflush(stdout) ;
     // x is n_tot x L_inc, column major
@@ -101,10 +97,6 @@ int main(int argc, char *argv[]) {
     read_submatrix_genotypes_double(f, n_tot, indiv_include, L_tot, snp_include,  x) ;
     fclose(f) ;
 
-    // PRINT("%s\t/* First %d entries of genotypes x: */\n", timestring(), MIN(n_inc*nvecs, 100)) ;
-    // for(i = 0 ; i < MIN(n_inc*nvecs, 100) ; i++) PRINT("%lf ", x[i]) ;
-    // putchar('\n') ;
-    
     PRINT("%s\t/* Read freqs */\n", timestring()) ; fflush(stdout) ;
     freq = ALLOC(L_inc, double) ;
     f = fopen(freq_file, "r") ;
@@ -117,10 +109,6 @@ int main(int argc, char *argv[]) {
 	for(i = 0 ; i < n_inc ; i++)
 	    if(*xx++ == MISSING) *(xx - 1) = 2 * freq[l] ;
     
-    PRINT("%s\t/* First %d entries of freqs: */\n", timestring(), MIN(L_inc, 100)) ;
-    for(i = 0 ; i < MIN(L_inc, 100) ; i++) PRINT("%lf ", freq[i]) ;
-    putchar('\n') ;
-
     PRINT("%s\t/* Compute SNP loadings */\n", timestring()) ; fflush(stdout) ;
     y = matprod(v, x, TRUE, FALSE, n_tot, nvecs, n_tot, L_inc, 1.0) ;
     sprintf(outfile, "%s-%d-%d", outfile_partial, a+1, b) ;
