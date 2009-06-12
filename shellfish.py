@@ -171,12 +171,12 @@ class SNPLoadData(OneLinePerSNPData):
         
         self.proj_file = temp_filename()
         log('project genotype data: output file is %s' % self.proj_file)
-        cmd = '%s %s -g %s -e %s -f %s -o %s -a %d -b %d -L %d -N %d -V %d' % (
+        cmd = '%s %s -g %s -e %s -f %s -o %s -a %d -b %d -L %d -N %d -V %d %s' % (
             exe['project'],
             '-s' if not settings.no_rescale else '',
             data.genofile(), evecsfile, freq_file, self.proj_file,
             1, data.numsnps, data.numsnps,
-            data.numindivs, settings.numpcs)
+            data.numindivs, settings.numpcs, settings.vflag)
         execute(cmd, name = 'project-%s' % os.getpid())
 
     def flip_mapfile(self, target):
@@ -289,13 +289,13 @@ class GenoData(GenotypeData, OneLinePerSNPData):
         submats = submatrices(self.numindivs, settings.maxprocs)
         def submatrix_cmd(i):
             submat = submats[i]
-            return "%s -v -a %d -b %d -c %d -d %d -N %d -L %d -l %d %s %s -f %s -o %s" % \
+            return "%s -a %d -b %d -c %d -d %d -N %d -L %d -l %d %s %s -f %s -o %s %s" % \
                 (exe['genocov'], \
                      submat[0][0], submat[0][1], submat[1][0], submat[1][1], \
                      self.numindivs, self.numsnps, self.numsnps, \
                      '-i' if self.split_data_dir else '-g', \
                      self.split_data_dir or self.genofile(), \
-                     freqfile, outdir)
+                     freqfile, outdir, settings.vflag)
         
         if settings.sge:
             def make_sge_process(i):
@@ -345,8 +345,8 @@ class GenoData(GenotypeData, OneLinePerSNPData):
             log('Computing principal components')
         outdir = temp_filename()
         os.mkdir(outdir)
-        cmd = "%s -v -n %d -V %d -g %s -o %s" % (
-            exe['coveigen'], self.numindivs, settings.numpcs, self.covfile, outdir)
+        cmd = "%s -n %d -V %d -g %s -o %s %s" % (
+            exe['coveigen'], self.numindivs, settings.numpcs, self.covfile, outdir, settings.vflag)
         execute(cmd, name = 'coveigen-%s' % os.getpid())
         self.evecsfile = os.path.join(outdir, 'evecs')
         self.evalsfile = os.path.join(outdir, 'evals')
@@ -371,10 +371,10 @@ class GenoData(GenotypeData, OneLinePerSNPData):
         outfile_basename = os.path.join(outdir, 'snpload')
         
         def snpload_chunk_command(i):
-            return "%s -a %d -b %d -N %d -V %d -L %d -g %s -e %s -f %s -o %s" % \
+            return "%s -a %d -b %d -N %d -V %d -L %d -g %s -e %s -f %s -o %s %s" % \
                 (exe['snpload'], chunks[i][0], chunks[i][1],
                  self.numindivs, settings.numpcs, self.numsnps,
-                 self.genofile(), settings.evecsfile, freqfile, outfile_basename)
+                 self.genofile(), settings.evecsfile, freqfile, outfile_basename, settings.vflag)
         
         if settings.sge:
             def make_sge_process(i):
@@ -838,6 +838,8 @@ class ShellFish(CommandLineApp):
                         'with respect to SNPs and/or allele encoding.' % \
                         (data.mapfile(), data2.mapfile()))
             log('Data files agree with respect to SNPs and allele encoding')
+            log('data1 files are %s and %s' % (data.genofile(), data.mapfile()))
+            log('data2 files are %s and %s' % (data2.genofile(), data2.mapfile()))
 
         out_basename = settings.outfile
 
@@ -895,6 +897,7 @@ class ShellFish(CommandLineApp):
         if os.name != 'posix':
             raise ShellFishError('Are you using Windows? %s lives only on linux / unix / OS X.' %
                                  __progname__)
+        settings.vflag = '-v' if settings.verbose else ''
 
         if not settings.file1:
             raise ShellFishError(
@@ -956,14 +959,17 @@ class ShellFish(CommandLineApp):
 
         have_qsub = system('which qsub > /dev/null 2>&1', [0, 256]) == 0
         have_qstat = system('which qstat > /dev/null 2>&1', [0, 256]) == 0
-        if have_qsub and have_qstat and not settings.sge and not settings.ignore_sge:
-            raise ShellFishError("It looks like you're on a compute cluster running the Sun Grid Engine: " +\
-                                     "you should use the --sge option. If you really want to not use SGE and "+\
-                                     "use this machine's processors for " +\
-                                     "the computations then supply the --ignore-sge option.")
-        elif settings.ignore_sge:
-            system(sge_preamble)
+        if have_qsub and have_qstat and not settings.sge:
+            if not settings.ignore_sge:
+                raise ShellFishError("It looks like you're on a compute cluster running the Sun Grid Engine: " +\
+                                         "you should use the --sge option. If you really want to not use SGE and "+\
+                                         "use this machine's processors for " +\
+                                         "the computations then supply the --ignore-sge option.")
+            else:
+                system(sge_preamble)
 
+
+            
     def process_input_files(self, path):
         '''Determine the basename, and whether or not a genotype file
         is present. Create hard links to these files so that the input
