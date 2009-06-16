@@ -830,16 +830,16 @@ class ShellFish(CommandLineApp):
             # If we're doing anything with data2, we're going to want to subset and flip
             data = data.to_geno()
             restrict_to_intersection([data, data2])
+
             log('\nFlipping %s to match encoding of %s\n' % (data.basename, data2.basename))
             data.flip(data2)
+
             if not data.is_aligned(data2):
                 raise ShellFishError(
                     'After subsetting and flipping, map files %s and %s differ'+\
                         'with respect to SNPs and/or allele encoding.' % \
                         (data.mapfile(), data2.mapfile()))
             log('Data files agree with respect to SNPs and allele encoding')
-            log('data1 files are %s and %s' % (data.genofile(), data.mapfile()))
-            log('data2 files are %s and %s' % (data2.genofile(), data2.mapfile()))
 
         out_basename = settings.outfile
 
