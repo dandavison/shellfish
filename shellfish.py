@@ -12,7 +12,7 @@ except:
     __have_multiprocessing__ = False
     from process import Process
 
-__version__ = '0.0.4'
+__version__ = '0.0.5'
 __progname__ = 'shellfish'
 # Global dict specifying the order of columns in .map files
 mapcol = dict(chrom=1, rs=2, cM=3, bp=4, allele1=5, allele2=6, freq=7, pc1=8)
@@ -368,13 +368,12 @@ class GenoData(GenotypeData, OneLinePerSNPData):
 
         outdir = temp_filename()
         os.mkdir(outdir)
-        outfile_basename = os.path.join(outdir, 'snpload')
         
         def snpload_chunk_command(i):
             return "%s -a %d -b %d -N %d -V %d -L %d -g %s -e %s -f %s -o %s %s" % \
                 (exe['snpload'], chunks[i][0], chunks[i][1],
                  self.numindivs, settings.numpcs, self.numsnps,
-                 self.genofile(), settings.evecsfile, freqfile, outfile_basename, settings.vflag)
+                 self.genofile(), settings.evecsfile, freqfile, outdir, settings.vflag)
         
         if settings.sge:
             def make_sge_process(i):
@@ -405,9 +404,9 @@ class GenoData(GenotypeData, OneLinePerSNPData):
             for p in done_now.difference(done):
                 if procs[p].exitcode != 0:
                     raise ShellFishError('snpload process %d had non-zero exit status' % p)
-                outfile = outfile_basename + '-%d-%d' % chunks[p]
+                outfile = os.path.join(outdir, '%015d-%015d' % chunks[p])
                 if not isfile(outfile):
-                    raise ShellFishError('After snpload: expecting file %s to exist' % snpload_file)
+                    raise ShellFishError('After snpload: expecting file %s to exist' % outfile)
             if len(done_now) == len(procs):
                 break
             done = done_now

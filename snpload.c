@@ -27,7 +27,7 @@
 
 int main(int argc, char *argv[]) {
     int c, n_tot, n_inc, nvecs, a, b, L_inc, L_tot, l, i ;
-    char *geno_file, *evec_file, *freq_file, *outfile_partial, outfile[250] ;
+    char *geno_file, *evec_file, *freq_file, *outdir, outfile[250] ;
     double *v, *x, *xx, *y, *freq ;
     bool *snp_include, *indiv_include, *evec_include, verbose=false ;
     FILE *f ;
@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
 	case 'f':
 	    freq_file = optarg ; break ;
 	case 'o':
-	    outfile_partial = optarg ; break ;
+	    outdir = optarg ; break ;
 	case 'v':
 	    verbose = true ; break ;
 	case '?':
@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
 	PRINT("geno file = %s\n", geno_file) ;
 	PRINT("evec file = %s\n", evec_file) ;
 	PRINT("freq file = %s\n", freq_file) ;
-	PRINT("outfile_partial = %s\n", outfile_partial) ;
+	PRINT("outdir = %s\n", outdir) ;
     }
 
     if(verbose) PRINT("%s\t/* Read eigenvectors */\n", timestring()) ; fflush(stdout) ;
@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
     
     if(verbose) PRINT("%s\t/* Compute SNP loadings */\n", timestring()) ; fflush(stdout) ;
     y = matprod(v, x, TRUE, FALSE, n_tot, nvecs, n_tot, L_inc, 1.0) ;
-    sprintf(outfile, "%s-%d-%d", outfile_partial, a+1, b) ;
+    sprintf(outfile, "%s/%015d-%015d", outdir, a+1, b) ;
     f = fopen(outfile, "w") ;
     write_matrix_double(y, f, nvecs, L_inc, "%lf\t") ;
     fclose(f) ;
