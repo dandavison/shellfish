@@ -143,7 +143,10 @@ class OneLinePerSNPData(Data):
     genotype data, they inherit from this class, as do GenoData and
     GenData. restrict_to_intersection could be a method of this class,
     but it alters two data objects, which seems wrong for a method.'''
-    pass
+    def extract_snps(self, snps):
+        """Return a OneLinePerSNPData genotype object containing only
+        the snps specified by the index vector 'snps'"""
+        raise ShellFishError('Not yet implemented')
 
 class SNPLoadData(OneLinePerSNPData):
     '''A SNPLoadData object is a Data object without a genotypes
@@ -686,19 +689,21 @@ class ShellFish(CommandLineApp):
         op.set_usage('usage: %s <action> --file basename [--file2 basename2] [<options>]' % 
                      __progname__)
 
-        op.add_option('', '--file', '--file1', dest='file1', type='string', default=None, 
-                      help='input genotype file name (no suffix)')
+        op.add_option('', '--file', '--file1', '--cases',
+                      dest='file1', type='string', default=None, 
+                      help='Input genotype file name (no suffix)')
 
-        op.add_option('', '--file2', '--snpload-file', dest='file2', type='string', default=None, 
-                      help='file name (without suffix) of second data set' + \
+        op.add_option('', '--file2', '--controls', '--snpload-file',
+                      dest='file2', type='string', default=None, 
+                      help='File name (without suffix) of second data set' + \
                           '(this may identify just a .map file, without associated genotype data)')
 
         op.add_option('', '--evecs', dest='evecsfile', type='string', default=None, 
-                      help='file name of evecs file (numpcs rows and num_indivs columns)')
+                      help='File name of evecs file (numpcs rows and num_indivs columns)')
 
         op.add_option('-o', '--out', '--outfile', dest='outfile', type='string',
                       default=__progname__, 
-                      help='base of output file name')
+                      help='Base of output file name')
 
         op.add_option('', '--pca', dest='pca', default=False, action='store_true',
                       help='Carry out PCA of the matrix of genotype data')
@@ -716,7 +721,7 @@ class ShellFish(CommandLineApp):
 
         op.add_option('', '--project', '--pca-projection', dest='project', default=False,
                       action='store_true',
-                      help='project genotype data into co-ordinate system defined by SNP loadings')
+                      help='Project genotype data into co-ordinate system defined by SNP loadings')
 
         op.add_option('', '--no-rescale', dest='no_rescale', default=False, action='store_true',
                       help='Do not rescale genotype data when computing projection')
@@ -726,6 +731,17 @@ class ShellFish(CommandLineApp):
 
         op.add_option('', '--subset', dest='subset', default=False, action='store_true',
                       help='Restrict genotype data to SNPs specified by --map argument')
+
+        op.add_option('', '--snptest', dest='snptest', default=False, action='store_true',
+                      help="Run Jonathan Marchini's 'snptest' program on specified" + \
+                          "case and control data files")
+
+        op.add_option('', '--exclude-indivs', dest='exclude_indivs_file', type='string',
+                      default=None,
+                      help='File containing list of individual IDs to exclude (for snptest only)')
+
+        op.add_option('', '--snptest-chunk', dest='snptest_chunk', default=None, type='int',
+                      help="snptest chunk size (default 100)")
 
         op.add_option('', '--flip', dest='flip', default=False, action='store_true',
                       help='Flip file1 input data to match allele encoding of file2')
@@ -781,10 +797,10 @@ class ShellFish(CommandLineApp):
                       help="Job priority level for Sun Grid Engine submissions")
         
         op.add_option('', '--ignore-sge', dest='ignore_sge', default=False, action='store_true',
-                      help="Don't Use Sun Grid Engine for computations even though it is available.")
+                      help="Don't use Sun Grid Engine for computations even though it is available")
 
         op.add_option('-w', '--wtchg', dest='wtchg', default=False, action='store_true',
-                      help="activate wtchg file naming conventions")
+                      help="Activate wtchg file naming conventions")
         
     def main(self):
         global settings
@@ -913,11 +929,12 @@ class ShellFish(CommandLineApp):
                                  "--make-geno "
                                  "--make-gen "
                                  "--make-ped "
-                                 "--make-bed")
+                                 "--make-bed"
+                                 "--snptest")
 
         actions = [settings.make_geno, settings.make_gen, settings.make_ped, settings.make_bed,
                    settings.flip, settings.subset, settings.check_snps,
-                   settings.pca, settings.snpload, settings.project]
+                   settings.pca, settings.snpload, settings.project, setting.snptest]
 
         if not any(actions):
             raise ShellFishError(available_actions_msg)
@@ -931,6 +948,8 @@ class ShellFish(CommandLineApp):
             set_executables(['snpload'])
         if settings.project:
             set_executables(['project'])
+        if settings.snptest:
+            set_executables(['snptest'])
 
         if settings.maxprocs > 1 and not settings.sge and not __have_multiprocessing__:
             print('Failed to import multiprocessing module: '
@@ -960,10 +979,11 @@ class ShellFish(CommandLineApp):
         have_qstat = system('which qstat > /dev/null 2>&1', [0, 256]) == 0
         if have_qsub and have_qstat and not settings.sge:
             if not settings.ignore_sge:
-                raise ShellFishError("It looks like you're on a compute cluster running the Sun Grid Engine: " +\
-                                         "you should use the --sge option. If you really want to not use SGE and "+\
-                                         "use this machine's processors for " +\
-                                         "the computations then supply the --ignore-sge option.")
+                raise ShellFishError(
+                    "It looks like you're on a compute cluster running the Sun Grid Engine: " +\
+                        "you should use the --sge option. If you really want to not use SGE and "+\
+                        "use this machine's processors for " +\
+                        "the computations then supply the --ignore-sge option.")
             else:
                 system(sge_preamble)
 
@@ -1042,6 +1062,24 @@ def execute(cmd, name):
                    priority=settings.sge_level).execute_in_serial()
     else:
         system(cmd)
+
+def snptest(cases, controls):
+    for data in [cases, controls]:
+        if not is_instance(data, (GenData, GenGzData)):
+            raise ShellFishError('snptest data sets must be .gen or .gen.gz')
+
+    outfile = '%s.snptest' % settings.outfile
+    cmd = '%s -frequentist 1 -hwe ' % exe['snptest']
+    cmd += '-cases %s.gen %s.sample ' % (cases.basename, cases.basename)
+    cmd += '-controls %s.gen %s.sample ' % (controls.basename, controls.basename)
+    cmd += '-o %s ' % outfile
+    if settings.exclude_indivs_file:
+        cmd += '-exclude_samples %s ' % settings.exclude_indivs_file)
+    if settings.snptest_chunk:
+        cmd += '-chunk %d' % settings.snptest_chunk
+
+    execute(cmd, name = 'snptest-%s' % os.getpid())
+    return outfile
 
 def restrict_to_intersection(data_objects):
     mapfiles = [data.mapfile() for data in data_objects]
