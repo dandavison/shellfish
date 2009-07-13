@@ -12,7 +12,7 @@ except:
     __have_multiprocessing__ = False
     from process import Process
 
-__version__ = '0.0.5'
+__version__ = '0.0.6'
 __progname__ = 'shellfish'
 # Global dict specifying the order of columns in .map files
 mapcol = dict(chrom=1, rs=2, cM=3, bp=4, allele1=5, allele2=6, freq=7, pc1=8)
@@ -239,8 +239,6 @@ class GenoData(GenotypeData, OneLinePerSNPData):
         
         if not settings.messy: system('%s %s' % (exe['rm'], self.genofile()))
         return GenData(self.basename)
-
-
 
     def to_geno(self):
         return self
@@ -517,7 +515,6 @@ class GenGzData(GenData):
     def __init__(self, basename):
         self.gzipped = True
         GenotypeData.__init__(self, basename, '.gen.gz')
-        
     def to_gen(self):
         genofile = temp_filename()
         system('gunzip -c %s > %s' % (self.genofile(), genofile))
@@ -534,6 +531,7 @@ class GenGzData(GenData):
         return self
     def to_geno(self):
         return self.to_gen().to_geno()
+
     def to_ped(self):
         return self.to_gen().to_ped()
     def to_bed(self):
