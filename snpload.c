@@ -27,12 +27,12 @@
 
 int main(int argc, char *argv[]) {
     int c, n_tot, n_inc, nvecs, a, b, L_inc, L_tot, l, i ;
-    char *geno_file, *evec_file, *freq_file, *outdir, outfile[250] ;
+    char *geno_file, *evec_file, *freq_file ;
     double *v, *x, *xx, *y, *freq ;
     bool *snp_include, *indiv_include, *evec_include, verbose=false ;
     FILE *f ;
 
-    while((c = getopt(argc, argv, "a:b:N:V:L:g:e:f:o:v")) != -1) {
+    while((c = getopt(argc, argv, "a:b:N:V:L:g:e:f:v")) != -1) {
 	switch(c) {
 	case 'a':
 	    a = atoi(optarg) - 1; break ;
@@ -50,8 +50,6 @@ int main(int argc, char *argv[]) {
 	    evec_file = optarg ; break ;
 	case 'f':
 	    freq_file = optarg ; break ;
-	case 'o':
-	    outdir = optarg ; break ;
 	case 'v':
 	    verbose = true ; break ;
 	case '?':
@@ -61,7 +59,7 @@ int main(int argc, char *argv[]) {
 
     assert(a >= 0 && b >= a) ;
 
-    if(verbose) PRINT("%s\t/* Construct inclusion vectors */\n", timestring()) ; fflush(stdout) ;
+    if(verbose) EPRINT("%s\t/* Construct inclusion vectors */\n", timestring()) ;
     indiv_include = NULL ;
     n_inc = n_tot ;
     evec_include = NULL ;
@@ -74,56 +72,52 @@ int main(int argc, char *argv[]) {
     assert(L_inc == b - a) ;
     
     if(verbose) {
-	PRINT("L_tot = %d\n", L_tot) ;
-	PRINT("[a,b) = [%d,%d) -> L_inc = %d\n", a, b, L_inc) ;
-	PRINT("n_tot = %d\n", n_tot) ;
-	PRINT("n_inc = %d\n", n_inc) ;
-	PRINT("nvecs = %d\n", nvecs) ;
-	PRINT("geno file = %s\n", geno_file) ;
-	PRINT("evec file = %s\n", evec_file) ;
-	PRINT("freq file = %s\n", freq_file) ;
-	PRINT("outdir = %s\n", outdir) ;
+	EPRINT("L_tot = %d\n", L_tot) ;
+	EPRINT("[a,b) = [%d,%d) -> L_inc = %d\n", a, b, L_inc) ;
+	EPRINT("n_tot = %d\n", n_tot) ;
+	EPRINT("n_inc = %d\n", n_inc) ;
+	EPRINT("nvecs = %d\n", nvecs) ;
+	EPRINT("geno file = %s\n", geno_file) ;
+	EPRINT("evec file = %s\n", evec_file) ;
+	EPRINT("freq file = %s\n", freq_file) ;
     }
 
-    if(verbose) PRINT("%s\t/* Read eigenvectors */\n", timestring()) ; fflush(stdout) ;
+    if(verbose) EPRINT("%s\t/* Read eigenvectors */\n", timestring()) ;
     // v is n_tot x nvecs, column major
     v = ALLOC(nvecs * n_inc, double) ;
     f = fopen(evec_file, "r") ;
     read_submatrix_double(f, n_tot, indiv_include, nvecs, evec_include, "%lf", v) ;
     fclose(f) ;
     
-    if(verbose) PRINT("%s\t/* Read genotypes */\n", timestring()) ; fflush(stdout) ;
+    if(verbose) EPRINT("%s\t/* Read genotypes */\n", timestring()) ;
     // x is n_tot x L_inc, column major
     x = ALLOC(L_inc * n_inc, double) ;
     f = fopen(geno_file, "r") ;
     read_submatrix_genotypes_double(f, n_tot, indiv_include, L_tot, snp_include,  x) ;
     fclose(f) ;
 
-    if(verbose) PRINT("%s\t/* Read freqs */\n", timestring()) ; fflush(stdout) ;
+    if(verbose) EPRINT("%s\t/* Read freqs */\n", timestring()) ;
     freq = ALLOC(L_inc, double) ;
     f = fopen(freq_file, "r") ;
     read_submatrix_double(f, L_tot, snp_include, 1, NULL, "%lf", freq) ;
     fclose(f) ;
     
-    if(verbose) PRINT("%s\t/* Set NAs to freq */\n", timestring()) ; fflush(stdout) ;
+    if(verbose) EPRINT("%s\t/* Set NAs to freq */\n", timestring()) ;
     xx = x ;
     for(l = 0 ; l < L_inc ; l++)
 	for(i = 0 ; i < n_inc ; i++)
 	    if(*xx++ == MISSING) *(xx - 1) = 2 * freq[l] ;
     
-    if(verbose) PRINT("%s\t/* Compute SNP loadings */\n", timestring()) ; fflush(stdout) ;
+    if(verbose) EPRINT("%s\t/* Compute SNP loadings */\n", timestring()) ;
     y = matprod(v, x, TRUE, FALSE, n_tot, nvecs, n_tot, L_inc, 1.0) ;
-    sprintf(outfile, "%s/%015d-%015d", outdir, a+1, b) ;
-    f = fopen(outfile, "w") ;
-    write_matrix_double(y, f, nvecs, L_inc, "%lf\t") ;
-    fclose(f) ;
+    write_matrix_double(y, stdout, nvecs, L_inc, "%lf\t") ;
     
     FREE(y) ;
     FREE(snp_include) ;
     FREE(v) ;
     FREE(x) ;
     FREE(freq) ;
-    if(verbose) PRINT("%s\t/* Done! */\n", timestring()) ;
+    if(verbose) EPRINT("%s\t/* Done! */\n", timestring()) ;
 
     return 0 ;
 }
