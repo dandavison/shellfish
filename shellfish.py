@@ -361,60 +361,15 @@ class GenoData(GenotypeData, OneLinePerSNPData):
         system("%s -n %d < %s > %s" %
                (exe['sstat'], self.numindivs, self.genofile(), freqfile))
 
-        L = self.numsnps
-        p = settings.maxprocs
-        chunksizes = [L/p] * p
-        for i in range(L % p): chunksizes[i] += 1
-        ends = cumsum(chunksizes)
-        starts = [e+1 for e in [0] + ends[:-1]]
-        chunks = zip(starts, ends)
-
-        outdir = temp_filename()
-        os.mkdir(outdir)
-        
-        def snpload_chunk_command(i):
+        def snpload_chunk_command(p):
             return "%s -a %d -b %d -N %d -V %d -L %d -g %s -e %s -f %s -o %s %s" % \
-                (exe['snpload'], chunks[i][0], chunks[i][1],
+                (exe['snpload'], chunks[p][0], chunks[p][1],
                  self.numindivs, settings.numpcs, self.numsnps,
                  self.genofile(), settings.evecsfile, freqfile, outdir, settings.vflag)
         
-        if settings.sge:
-            def make_sge_process(i):
-                cmd = settings.sge_preamble + '\n' + snpload_chunk_command(i)
-                return SGEprocess(
-                    command=cmd,
-                    name = '-'.join(['snpload', str(os.getpid()), "%03d" % i]),
-                    directory = settings.sgedir,
-                    priority=settings.sge_level,
-                    nslots = 1)
-            procs = map(make_sge_process, range(settings.maxprocs))
-        else:
-            def compute_chunk(i):
-                system(snpload_chunk_command(i))
-            procs = [Process(target=compute_chunk, args=(i,)) for i in range(settings.maxprocs)]
-
-        log('Computing SNP loadings using %d parallel process%s' %
-            (len(procs), 'es' if len(procs) > 1 else ''))
-
-        for p in procs: p.start()
-        done = set([])
-        interval = 10
-        i = 0
-        while True:
-            done_now = set(which([not p.is_alive() for p in procs]))
-            if not i % (60/interval) and len(done_now):
-                log('%s\t%s/%s processes finished' % (timenow(), len(done_now), len(procs)))
-            for p in done_now.difference(done):
-                if procs[p].exitcode != 0:
-                    raise ShellFishError('snpload process %d had non-zero exit status' % p)
-                outfile = os.path.join(outdir, '%015d-%015d' % chunks[p])
-                if not isfile(outfile):
-                    raise ShellFishError('After snpload: expecting file %s to exist' % outfile)
-            if len(done_now) == len(procs):
-                break
-            done = done_now
-            time.sleep(interval)
-        log("All snpload processes finished: concatenating snpload chunks.")
+        chunks = allocate_chunks(self.numsnps, settings.maxprocs)
+        outdir = process_chunks_in_parallel(snpload_chunk_command, 'snpload')
+        log("All snpload processes finished: concatenating chunks.")
         self.snpload_file = temp_filename()
         execute("find %s -type f | sort | xargs cat | paste %s %s - > %s" % \
                     (outdir, self.mapfile(), freqfile, self.snpload_file),
@@ -1062,25 +1017,97 @@ def execute(cmd, name):
                    directory = settings.sgedir,
                    priority=settings.sge_level).execute_in_serial()
     else:
-        system(cmd)
+        system('#!/bin/bash\n' + cmd)
 
 def snptest(cases, controls):
     for data in [cases, controls]:
         if not is_instance(data, (GenData, GenGzData)):
-            raise ShellFishError('snptest data sets must be .gen or .gen.gz')
+            raise ShellFishError('Snptest data sets must be .gen or .gen.gz')
+    if cases.numsnps != controls.numsnps:
+        raise ShellFishError('Cases and controls have different numbers of SNPs')
+    numsnps = cases.numsnps
 
-    outfile = '%s.snptest' % settings.outfile
-    cmd = '%s -frequentist 1 -hwe ' % exe['snptest']
-    cmd += '-cases %s.gen %s.sample ' % (cases.basename, cases.basename)
-    cmd += '-controls %s.gen %s.sample ' % (controls.basename, controls.basename)
-    cmd += '-o %s ' % outfile
-    if settings.exclude_indivs_file:
-        cmd += '-exclude_samples %s ' % settings.exclude_indivs_file)
-    if settings.snptest_chunk:
-        cmd += '-chunk %d' % settings.snptest_chunk
+    chunks = allocate_chunks(numsnps, settings.maxprocs)
+    snpids = cases.get_snpids()
+    xsnp_files = [temp_filename() for p in range(len(chunks))]
+    for p in range(len(chunks)):
+        xsnps = [snpids[l] for l in range(numsnps) if l not in range(*chunks[p])]
+        with open(xsnp_files[p], 'w') as fname:
+            fname.write('\n'.join(xsnps))
 
-    execute(cmd, name = 'snptest-%s' % os.getpid())
+    def snptest_chunk_command(p):
+        outfile = '%s.snptest' % settings.outfile
+        cmd = '%s -frequentist 1 -hwe ' % exe['snptest']
+        cmd += '-cases %s.gen %s.sample ' % (cases.basename, cases.basename)
+        cmd += '-controls %s.gen %s.sample ' % (controls.basename, controls.basename)
+        cmd += '-o %s ' % outfile
+        cmd += '-exclude_snps ' % xsnp_files[p]
+        if settings.exclude_indivs_file:
+            cmd += '-exclude_samples %s ' % settings.exclude_indivs_file)
+        if settings.snptest_chunk:
+            cmd += '-chunk %d' % settings.snptest_chunk
+        return cmd
+
+    outdir = process_chunks_in_parallel(snptest_chunk_command, 'snptest')
+    log("All snptest processes finished: concatenating chunks.")
+    outfile = temp_filename()
+
+    concat_cmd = 'unset _shellfish_gothdr\n' + \
+        'for f in $(find %s -type f | sort) ; do\n' % outdir+ \
+        '   [ -z "$_shellfish_gothdr" ] && cat $f || sed 1d $f && _shellfish_gothdr=true\n' +\
+        'done > %s' % outfile
+    
+    execute(concat_cmd, name='snptest-cat')
     return outfile
+
+def process_chunks_in_parallel(chunk_command, process_name):
+    """For each of settings.maxprocs processes, execute chunk_command
+    in parallel, and wait until all processes are
+    finished. chunk_command takes a single argument p, which is the
+    process number. chunk_command may use p to index into other
+    objects in the calling function (via lexical scoping)."""
+    outdir = temp_filename()
+    os.mkdir(outdir)
+        
+    if settings.sge:
+        def make_sge_process(i):
+            cmd = settings.sge_preamble + '\n' + chunk_command(i)
+            return SGEprocess(
+                command=cmd,
+                name = '-'.join([process_name, str(os.getpid()), "%03d" % i]),
+                directory = settings.sgedir,
+                priority=settings.sge_level,
+                nslots = 1)
+        procs = map(make_sge_process, range(settings.maxprocs))
+    else:
+        def compute_chunk(i):
+            system(chunk_command(i))
+            procs = [Process(target=compute_chunk, args=(i,)) for i in range(settings.maxprocs)]
+
+    log('Executing %s using %d parallel process%s' % (
+        process_name, len(procs), 'es' if len(procs) > 1 else ''))
+
+    for p in procs: p.start()
+    done = set([])
+    interval = 10
+    i = 0
+    while True:
+        done_now = set(which([not p.is_alive() for p in procs]))
+        if not i % (60/interval) and len(done_now):
+            log('%s\t%s/%s processes finished' % (timenow(), len(done_now), len(procs)))
+        for p in done_now.difference(done):
+            if procs[p].exitcode != 0:
+                raise ShellFishError(
+            '%s process %d had non-zero exit status' % (process_name, p))
+            outfile = os.path.join(outdir, '%015d-%015d' % chunks[p])
+            if not isfile(outfile):
+                raise ShellFishError(
+            'After %s: expecting file %s to exist' % (process_name, outfile))
+        if len(done_now) == len(procs):
+            break
+        done = done_now
+        time.sleep(interval)
+    return outdir
 
 def restrict_to_intersection(data_objects):
     mapfiles = [data.mapfile() for data in data_objects]
