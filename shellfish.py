@@ -180,7 +180,7 @@ class SNPLoadData(OneLinePerSNPData):
             data.genofile(), evecsfile, freq_file, self.proj_file,
             1, data.numsnps, data.numsnps,
             data.numindivs, settings.numpcs, settings.vflag)
-        execute(cmd, name = 'project-%s' % os.getpid())
+        execute(cmd, name = 'project')
 
     def flip_mapfile(self, target):
         raise ShellFishError(
@@ -278,7 +278,7 @@ class GenoData(GenotypeData, OneLinePerSNPData):
             log('Splitting data: storing individual data files in %s' % self.split_data_dir)
         cmd = "%s -q -n %d -o %s < %s" % (
             exe['columns-split'], self.numsnps, self.split_data_dir, self.genofile())
-        execute(cmd, name = 'columns-split-%s' % os.getpid())
+        execute(cmd, name = 'columns-split')
         
     def compute_covariance_matrix(self):
         """Carry out PCA of the matrix of genotype data."""
@@ -341,7 +341,7 @@ class GenoData(GenotypeData, OneLinePerSNPData):
         log("Concatenating covariance matrix fragments")
         self.covfile = temp_filename()
         execute("find %s -type f | sort | xargs cat > %s" % (outdir, self.covfile),
-                name = 'genocov-cat-%s' % os.getpid())
+                name = 'genocov-cat')
         
     def compute_eigenvectors(self):
         if not settings.quiet:
@@ -350,7 +350,7 @@ class GenoData(GenotypeData, OneLinePerSNPData):
         os.mkdir(outdir)
         cmd = "%s -n %d -V %d -g %s -o %s %s" % (
             exe['coveigen'], self.numindivs, settings.numpcs, self.covfile, outdir, settings.vflag)
-        execute(cmd, name = 'coveigen-%s' % os.getpid())
+        execute(cmd, name = 'coveigen')
         self.evecsfile = os.path.join(outdir, 'evecs')
         self.evalsfile = os.path.join(outdir, 'evals')
 
@@ -418,7 +418,7 @@ class GenoData(GenotypeData, OneLinePerSNPData):
         self.snpload_file = temp_filename()
         execute("find %s -type f | sort | xargs cat | paste %s %s - > %s" % \
                     (outdir, self.mapfile(), freqfile, self.snpload_file),
-                name='snpload-cat-%s' % os.getpid())
+                name='snpload-cat')
 
 class GenData(GenotypeData, OneLinePerSNPData):
     """A class for data sets in the .gen format created by chiamo and
@@ -499,7 +499,7 @@ class GenData(GenotypeData, OneLinePerSNPData):
                 self.genofile(),
                 exe['gen2geno'], settings.threshold, self.numindivs,
                 self.basename + '.geno')
-        execute(cmd, name = 'gen2geno-%s' % os.getpid())
+        execute(cmd, name = 'gen2geno')
         if not settings.messy:
             system('%s %s %s' % (exe['rm'], self.genofile(), self.samplefile()))
         return GenoData(self.basename)
@@ -1056,6 +1056,7 @@ def execute(cmd, name):
     """Execute command, perhaps by submitting job to SGE, but in any
     case block until execution terminates."""
     if settings.sge:
+        name += '-%s' % os.getpid()
         SGEprocess(settings.sge_preamble + '\n' + cmd,
                    name = name,
                    directory = settings.sgedir,
