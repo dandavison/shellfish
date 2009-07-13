@@ -1071,54 +1071,64 @@ def snptest(cases, controls):
     execute(concat_cmd, name='snptest-cat')
     return outfile
 
-def process_chunks_in_parallel(chunk_command, process_name):
-    """For each of settings.maxprocs processes, execute chunk_command
-    in parallel, and wait until all processes are
-    finished. chunk_command takes a single argument p, which is the
-    process number. chunk_command may use p to index into other
-    objects in the calling function (via lexical scoping)."""
+def pmap(function, sequence, process_name='pmap'):
+    """Parallel version of 'map'.
+    
+    Return a list of filenames containing the results of executing
+    shell commands constructed using the items of the argument
+    sequence.
+    
+    'function' is a function returning a shell command to be
+    executed. It should take two arguments: the first is the
+    corresponding element of 'sequence', and the second is the name of
+    a file which will receive the output of the shell command.
+    
+    'sequence' is the sequence to be iterated over. Each element of
+    this sequence is passed to 'function', which may use it in
+    constructing the approriate shell command (note that function can
+    use this value to index into objects in the enclosing scope)."""
+
+    numprocs = len(sequence)
     outdir = temp_filename()
     os.mkdir(outdir)
-        
+    outfiles = [os.path.join(outdir, '%05d' % i) for i in range(numprocs)]
+
     if settings.sge:
-        def make_sge_process(i):
-            cmd = settings.sge_preamble + chunk_command(i)
+        def make_sge_process(item, outfile, i):
             return SGEprocess(
-                command=cmd,
+                command = settings.sge_preamble + function(item, outfile),
                 name = '-'.join([process_name, str(os.getpid()), "%03d" % i]),
                 directory = settings.sgedir,
                 priority=settings.sge_level,
                 nslots = 1)
-        procs = map(make_sge_process, range(settings.maxprocs))
+
+        procs = [make_sge_process(item, outfile, i)
+                 for item, outfile, i in zip(sequence, outfiles, range(numprocs))]
     else:
-        def compute_chunk(i):
-            system(chunk_command(i))
-            procs = [Process(target=compute_chunk, args=(i,)) for i in range(settings.maxprocs)]
+        procs = [Process(target=lambda args : system(function(*args)), args=((item, outfile),))
+                 for item, outfile in zip(sequence, outfiles)]
 
-    log('Executing %s using %d parallel process%s' % (
-        process_name, len(procs), 'es' if len(procs) > 1 else ''))
-
-    for p in procs: p.start()
     done = set([])
     interval = 10
-    i = 0
+    for p in procs: p.start()
+    tick = 0
     while True:
         done_now = set(which([not p.is_alive() for p in procs]))
-        if not i % (60/interval) and len(done_now):
-            log('%s\t%s/%s processes finished' % (timenow(), len(done_now), len(procs)))
-        for p in done_now.difference(done):
-            if procs[p].exitcode != 0:
+        if not tick % (60/interval) and len(done_now):
+            log('%s\t%s/%s processes finished' % (timenow(), len(done_now), numprocs))
+        for i in done_now.difference(done):
+            if procs[i].exitcode != 0:
                 raise ShellFishError(
-            '%s process %d had non-zero exit status' % (process_name, p))
-            outfile = os.path.join(outdir, '%015d-%015d' % chunks[p])
-            if not isfile(outfile):
+                    '%s process %d had non-zero exit status' % (process_name, i))
+            if not isfile(outfiles[i]):
                 raise ShellFishError(
-            'After %s: expecting file %s to exist' % (process_name, outfile))
-        if len(done_now) == len(procs):
+                    'After %s: expecting file %s to exist' % (process_name, outfiles[i]))
+        if len(done_now) == numprocs:
             break
         done = done_now
         time.sleep(interval)
-    return outdir
+        tick += 1
+    return outfiles
 
 def restrict_to_intersection(data_objects):
     mapfiles = [data.mapfile() for data in data_objects]
