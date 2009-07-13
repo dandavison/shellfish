@@ -301,7 +301,7 @@ class GenoData(GenotypeData, OneLinePerSNPData):
         if settings.sge:
             def make_sge_process(i):
                 cmd = submatrix_cmd(i)
-                cmd = settings.sge_preamble + '\n' + cmd
+                cmd = settings.sge_preamble + cmd
                 return SGEprocess(
                     command=cmd,
                     name = '-'.join(['genocov', str(os.getpid()), "%03d" % i]),
@@ -926,10 +926,9 @@ class ShellFish(CommandLineApp):
             raise ShellFishError(
                 'Use the --numpcs option to specify the number of principal coordinates')
 
+        sge_preamble = '#$ -S /bin/bash\n'
         if os.popen('hostname').read().rstrip() in ['login1-cluster1','login2-cluster1']:
-            sge_preamble = 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/users/davison/lib64'
-        else:
-            sge_preamble = ''
+            sge_preamble += 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/users/davison/lib64\n'
         if settings.sge:
             settings.sgedir = 'shellfish-cluster-jobs-' + datetimenow()
             settings.wtchg = True
@@ -1020,7 +1019,7 @@ def execute(cmd, name):
     case block until execution terminates."""
     if settings.sge:
         name += '-%s' % os.getpid()
-        SGEprocess(settings.sge_preamble + '\n' + cmd,
+        SGEprocess(settings.sge_preamble + cmd,
                    name = name,
                    directory = settings.sgedir,
                    priority=settings.sge_level).execute_in_serial()
@@ -1079,7 +1078,7 @@ def process_chunks_in_parallel(chunk_command, process_name):
         
     if settings.sge:
         def make_sge_process(i):
-            cmd = settings.sge_preamble + '\n' + chunk_command(i)
+            cmd = settings.sge_preamble + chunk_command(i)
             return SGEprocess(
                 command=cmd,
                 name = '-'.join([process_name, str(os.getpid()), "%03d" % i]),

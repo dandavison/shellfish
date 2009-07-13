@@ -53,7 +53,6 @@ class SGEprocess(Process):
     def shell_script(self):
         """Construct the qsub submission shell script"""
         script = []
-        script += ["#!/bin/bash"]
         script += ["#$ -N %s" % self.name]
         script += ["#$ -o %s" % self.outfile]
         script += ["#$ -e %s" % self.errfile]
