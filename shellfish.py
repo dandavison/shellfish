@@ -372,8 +372,12 @@ class GenoData(GenotypeData, OneLinePerSNPData):
         if not settings.quiet:
             log("All snpload processes finished: concatenating chunks.")
         self.snpload_file = temp_filename()
-        execute("find %s -type f | sort | xargs cat | paste %s %s - > %s" % \
-                    (outdir, self.mapfile(), freqfile, self.snpload_file),
+        
+        tempfile = temp_filename()
+        with open(tempfile, 'w') as f:
+            f.write('\n'.join(outfiles))
+        execute("xargs cat < %s | paste %s %s - > %s" % \
+                    (tempfile, self.mapfile(), freqfile, self.snpload_file),
                 name='snpload-cat')
 
 class GenData(GenotypeData, OneLinePerSNPData):
