@@ -354,7 +354,9 @@ class GenoData(GenotypeData, OneLinePerSNPData):
 
     def compute_snploadings(self):
         if not settings.quiet:
-            log('Computing SNP loadings')
+            log('Computing SNP loadings using %d parallel process%s' % (
+                    settings.maxprocs, 'es' if settings.maxprocs > 1 else ''))
+
         freqfile = temp_filename()
         system("%s -n %d < %s > %s" %
                (exe['sstat'], self.numindivs, self.genofile(), freqfile))
@@ -1049,7 +1051,7 @@ def snptest(cases, controls):
         cmd += '-o %s ' % outfile
         cmd += '-exclude_snps ' % xsnp_file
         if settings.exclude_indivs_file:
-            cmd += '-exclude_samples %s ' % settings.exclude_indivs_file)
+            cmd += '-exclude_samples %s ' % settings.exclude_indivs_file
         if settings.snptest_chunk:
             cmd += '-chunk %d' % settings.snptest_chunk
         return cmd
