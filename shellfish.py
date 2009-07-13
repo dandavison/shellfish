@@ -897,7 +897,7 @@ class ShellFish(CommandLineApp):
 
         actions = [settings.make_geno, settings.make_gen, settings.make_ped, settings.make_bed,
                    settings.flip, settings.subset, settings.check_snps,
-                   settings.pca, settings.snpload, settings.project, setting.snptest]
+                   settings.pca, settings.snpload, settings.project, settings.snptest]
 
         if not any(actions):
             raise ShellFishError(available_actions_msg)
