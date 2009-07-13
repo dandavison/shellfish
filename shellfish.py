@@ -359,15 +359,18 @@ class GenoData(GenotypeData, OneLinePerSNPData):
         system("%s -n %d < %s > %s" %
                (exe['sstat'], self.numindivs, self.genofile(), freqfile))
 
-        def snpload_chunk_command(p):
-            return "%s -a %d -b %d -N %d -V %d -L %d -g %s -e %s -f %s -o %s %s" % \
-                (exe['snpload'], chunks[p][0], chunks[p][1],
+        def snpload_chunk_command(chunk, outfile):
+            return "%s -a %d -b %d -N %d -V %d -L %d -g %s -e %s -f %s %s > %s" % \
+                (exe['snpload'], chunk[0], chunk[1],
                  self.numindivs, settings.numpcs, self.numsnps,
-                 self.genofile(), settings.evecsfile, freqfile, outdir, settings.vflag)
+                 self.genofile(), settings.evecsfile, freqfile, settings.vflag, outfile)
+        
         
         chunks = allocate_chunks(self.numsnps, settings.maxprocs)
-        outdir = process_chunks_in_parallel(snpload_chunk_command, 'snpload')
-        log("All snpload processes finished: concatenating chunks.")
+        outfiles = pmap(snpload_chunk_command, chunks, 'snpload')
+
+        if not settings.quiet:
+            log("All snpload processes finished: concatenating chunks.")
         self.snpload_file = temp_filename()
         execute("find %s -type f | sort | xargs cat | paste %s %s - > %s" % \
                     (outdir, self.mapfile(), freqfile, self.snpload_file),
@@ -1032,8 +1035,22 @@ def snptest(cases, controls):
             raise ShellFishError('Snptest data sets must be .gen or .gen.gz')
     if cases.numsnps != controls.numsnps:
         raise ShellFishError('Cases and controls have different numbers of SNPs')
-    numsnps = cases.numsnps
+    log('Performing association tests using %d parallel process%s' % (
+            numprocs, 'es' if numprocs > 1 else ''))
 
+    def snptest_chunk_command(xsnp_file, outfile):
+        cmd = '%s -frequentist 1 -hwe ' % exe['snptest']
+        cmd += '-cases %s.gen %s.sample ' % (cases.basename, cases.basename)
+        cmd += '-controls %s.gen %s.sample ' % (controls.basename, controls.basename)
+        cmd += '-o %s ' % outfile
+        cmd += '-exclude_snps ' % xsnp_file
+        if settings.exclude_indivs_file:
+            cmd += '-exclude_samples %s ' % settings.exclude_indivs_file)
+        if settings.snptest_chunk:
+            cmd += '-chunk %d' % settings.snptest_chunk
+        return cmd
+
+    numsnps = cases.numsnps
     chunks = allocate_chunks(numsnps, settings.maxprocs)
     snpids = cases.get_snpids()
     xsnp_files = [temp_filename() for p in range(len(chunks))]
@@ -1042,23 +1059,10 @@ def snptest(cases, controls):
         with open(xsnp_files[p], 'w') as fname:
             fname.write('\n'.join(xsnps))
 
-    def snptest_chunk_command(p):
-        outfile = '%s.snptest' % settings.outfile
-        cmd = '%s -frequentist 1 -hwe ' % exe['snptest']
-        cmd += '-cases %s.gen %s.sample ' % (cases.basename, cases.basename)
-        cmd += '-controls %s.gen %s.sample ' % (controls.basename, controls.basename)
-        cmd += '-o %s ' % outfile
-        cmd += '-exclude_snps ' % xsnp_files[p]
-        if settings.exclude_indivs_file:
-            cmd += '-exclude_samples %s ' % settings.exclude_indivs_file)
-        if settings.snptest_chunk:
-            cmd += '-chunk %d' % settings.snptest_chunk
-        return cmd
+    outfiles = pmap(snptest_chunk_command, xsnp_files, 'snptest')
 
-    outdir = process_chunks_in_parallel(snptest_chunk_command, 'snptest')
     log("All snptest processes finished: concatenating chunks.")
     outfile = temp_filename()
-
     concat_cmd = 'unset _shellfish_gothdr\n' + \
         'for f in $(find %s -type f | sort) ; do\n' % outdir+ \
         '   [ -z "$_shellfish_gothdr" ] && cat $f || sed 1d $f && _shellfish_gothdr=true\n' +\
