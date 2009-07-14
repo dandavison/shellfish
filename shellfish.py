@@ -414,40 +414,7 @@ class GenData(GenotypeData, OneLinePerSNPData):
 
     def to_geno(self):
         log('Format conversion: gen -> geno')
-        # first make mapfile
-        # I think there's a bug in gtool: with
-        # alleles specified as e.g. 'A -', gtool writes the map file
-        # as 'A^I^@' when displayed under cat -A.
-#         system('%s -G --g %s --s %s --ped %s --map %s --threshold %f >> %s' % (
-#                 exe['gtool'], self.genofile(), self.samplefile(), 
-#                 '/dev/null', self.basename + '.map',
-#                 settings.threshold, settings.logfile))
-#         if not settings.messy: system('%s -f gtool.log' % (exe['rm']))
-        
-        cM_file = temp_filename()
-
-        with open(cM_file, 'w') as f:
-            f.write('\n'.join(['0'] * self.count_numsnps()) + '\n')
-        bp_alleles_file = temp_filename()
-        if not self.gzipped:
-            system("%s -d' ' -f 3,4,5 < %s | perl -pe 's/ /\t/g' > %s" %
-                   (exe['cut'], self.genofile(), bp_alleles_file))
-            system("%s -d' ' -f 1,2 < %s | perl -pe 's/ /\t/' | %s - %s %s > %s" %
-                   (exe['cut'], self.genofile(),
-                    exe['paste'], cM_file, bp_alleles_file,
-                    self.basename + '.map'))
-        else:
-            system("gunzip -c %s | %s -d' ' -f 3,4,5 | perl -pe 's/ /\t/g' > %s" %
-                   (self.genofile(),
-                    exe['cut'], bp_alleles_file))
-            system("gunzip -c %s | %s -d' ' -f 1,2 | perl -pe 's/ /\t/' | %s - %s %s > %s" %
-                   (self.genofile(),
-                    exe['cut'], 
-                    exe['paste'], cM_file, bp_alleles_file,
-                    self.basename + '.map'))
-            
-        if not settings.messy:
-            system('%s %s %s' % (exe['rm'], cM_file, bp_alleles_file))
+        self.mapfile() # ensure that mapfile exists
 
         # Now convert genotypes themselves
         if not self.gzipped:
