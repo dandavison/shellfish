@@ -469,14 +469,11 @@ class GenData(GenotypeData, OneLinePerSNPData):
 
     def count_numsnps(self):
         return count_lines(self.genofile())
+
     def get_snpids(self):
         tempfile = temp_filename()
-        if isinstance(self, GenGzData):
-            cmd = 'gunzip -c %s | %s -f %d > %s' % (
-                self.genofile, exe['cut'], gencol['snpid'], tempfile)
-        else:
-            cmd = '%s -f %d < %s > %s' % (
-                exe['cut'], gencol['snpid'], self.genofile, tempfile)
+        cmd = self.with_input_from_genofile('%s -f %d > %s' % (
+                exe['cut'], gencol['snpid'], tempfile))
         execute(cmd, name = 'get_snpids')
         return read_lines(tempfile)
 
