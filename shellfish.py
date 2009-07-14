@@ -473,9 +473,32 @@ class GenData(GenotypeData, OneLinePerSNPData):
             return basename + '.sample'
 
     def mapfile(self):
-        # raise ShellFishError('Attempt to refer to .map file for .gen format data
-        # (.gen format has no .map file)')
-        return None
+        mapfile = self.basename + '.map'
+        if not isfile(mapfile): self.create_mapfile()
+        return mapfile
+
+    def create_mapfile(self):
+        """Create mapfile from initial columns of .gen(.gz) file."""
+        field = dict(chrom=gencol['snpid'], rs=gencol['rs'], cM=None,
+                     bp=gencol['bp'], allele1=gencol['allele1'], allele2=gencol['allele2'])
+
+        # Construct a dummy genetic map column
+        cM_file = temp_filename()
+        write('\n'.join(['0'] * self.count_numsnps()) + '\n', cM_file)
+        
+        # Get the last 3 columns
+        bp_alleles_file = temp_filename()
+        cmd = self.with_input_from_genofile("%s -d' ' -f %d,%d,%d" % (
+                exe['cut'], field['bp'], field['allele1'], field['allele2']))
+        cmd += " | perl -pe 's/ /\t/g' > %s" % bp_alleles_file
+        execute(cmd, 'cut-gen2map-1')
+        
+        # Cut out the initial columns and paste everything together
+        cmd = self.with_input_from_genofile("%s -d' ' -f %d,%d" % (
+                exe['cut'], field['chrom'], field['rs']))
+        cmd += " | perl -pe 's/ /\t/g' | %s - %s %s > %s" % (
+            exe['paste'], cM_file, bp_alleles_file, self.basename + '.map')
+        execute(cmd, 'cut-gen2map-2')
 
     def count_numsnps(self):
         return count_lines(self.genofile())
