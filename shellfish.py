@@ -864,7 +864,7 @@ class ShellFish(CommandLineApp):
         elif settings.snpload:
             data = data.to_geno()
             if not isfile(settings.evecsfile):
-                raise ShellfishError('Invalid file: %s' % settings.evecsfile)
+                raise ShellFishError('Invalid file: %s' % settings.evecsfile)
             data.compute_snploadings()
             system("mv %s %s" % (data.snpload_file, out_basename + '.snpload'))
         elif settings.project:
@@ -889,25 +889,25 @@ class ShellFish(CommandLineApp):
                 'No genotype file supplied. Use %s --help to see available options.' \
                     % __progname__)
 
-        available_actions_msg = ("Please use one of the following options: "
-                                 "--pca "
-                                 "--snpload"
-                                 "--project, --pca-projection "
-                                 "--subset "
-                                 "--flip "
-                                 "--check-snps"
-                                 "--make-geno "
-                                 "--make-gen "
-                                 "--make-ped "
-                                 "--make-bed"
-                                 "--snptest")
+        self.available_actions_msg = ("Please use one of the following options: "
+                                      "--pca "
+                                      "--snpload"
+                                      "--project, --pca-projection "
+                                      "--subset "
+                                      "--flip "
+                                      "--check-snps"
+                                      "--make-geno "
+                                      "--make-gen "
+                                      "--make-ped "
+                                      "--make-bed"
+                                      "--snptest")
 
         actions = [settings.make_geno, settings.make_gen, settings.make_ped, settings.make_bed,
                    settings.flip, settings.subset, settings.check_snps,
                    settings.pca, settings.snpload, settings.project, settings.snptest]
 
         if not any(actions):
-            raise ShellFishError(available_actions_msg)
+            raise ShellFishError(self.available_actions_msg)
 
         set_executables(['perl', 'mv', 'rm', 'cut', 'grep', 'diff', 'paste'])
         set_executables(['lines', 'match', 'columns', 'columns-split'])
