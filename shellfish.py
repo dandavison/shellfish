@@ -374,10 +374,8 @@ class GenoData(GenotypeData, OneLinePerSNPData):
         if not settings.quiet:
             log("All snpload processes finished: concatenating chunks.")
         self.snpload_file = temp_filename()
-        
         tempfile = temp_filename()
-        with open(tempfile, 'w') as f:
-            f.write('\n'.join(outfiles))
+        write('\n'.join(outfiles), tempfile)
         execute("xargs cat < %s | paste %s %s - > %s" % \
                     (tempfile, self.mapfile(), freqfile, self.snpload_file),
                 name='snpload-cat')
@@ -1069,11 +1067,12 @@ def snptest(cases, controls):
 
     log("All snptest processes finished: concatenating chunks.")
     outfile = temp_filename()
-    concat_cmd = 'unset _shellfish_gothdr\n' + \
-        'for f in $(find %s -type f | sort) ; do\n' % outdir+ \
+    tempfile = temp_filename()
+    write('\n'.join(outfiles), tempfile)
+    concat_cmd = 'unset _shellfish_gothdr\n'
+    concat_cmd += 'while read f ; do\n' + \
         '   [ -z "$_shellfish_gothdr" ] && cat $f || sed 1d $f && _shellfish_gothdr=true\n' +\
-        'done > %s' % outfile
-    
+        'done < %s > %s' % (tempfile, outfile)
     execute(concat_cmd, name='snptest-cat')
     return outfile
 
