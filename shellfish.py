@@ -872,8 +872,13 @@ class ShellFish(CommandLineApp):
                 (data.basename, settings.numpcs, data2.basename))
             data2.project(data)
             system("mv %s %s" % (data2.proj_file, out_basename + '.proj'))
+        elif settings.snptest:
+            if not isinstance(data, GenGzData): data = data.to_gen()
+            if not isinstance(data2, GenGzData): data2 = data2.to_gen()
+            outfile = snptest(data, data2)
+            system("mv %s %s" % (outfile, out_basename + '.snpload'))
         else:
-            raise NotImplementedError(available_actions_msg)
+            raise ShellFishError(self.available_actions_msg)
         
         if not settings.messy:
             self.cleanup()
