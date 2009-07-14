@@ -773,6 +773,8 @@ class ShellFish(CommandLineApp):
         settings = self.options
         self.sanity_check()
 
+        # This is a fucking mess.
+
         basename, format = self.process_input_files(settings.file1)
         if format is None:
             raise ShellFishError('Failed to find genotypes file for basename %s' % basename)
@@ -793,6 +795,11 @@ class ShellFish(CommandLineApp):
             basename, format = self.process_input_files(settings.file2)
             if settings.project:
                 data2 = SNPLoadData(basename)
+            elif settings.snptest:
+                if format not in ['.gen', '.gen.gz']:
+                    raise ShellFishError(
+                        'Data file %s not recognised as .gen or .gen.gz format data')
+                data2 = self.data_classes[format](basename)
             else:
                 data2 = OneLinePerSNPData(basename)
             data2.create_links()
