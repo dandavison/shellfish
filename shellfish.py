@@ -883,6 +883,9 @@ class ShellFish(CommandLineApp):
         if os.name != 'posix':
             raise ShellFishError('Are you using Windows? %s lives only on linux / unix / OS X.' %
                                  __progname__)
+        if settings.show_version:
+            print('%s' % __version__)
+            sys.exit(0)
         settings.vflag = '-v' if settings.verbose else ''
 
         if not settings.file1:
