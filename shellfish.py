@@ -518,6 +518,9 @@ class GenData(GenotypeData, OneLinePerSNPData):
         raise NotImplementedError('GenData.is_aligned() not implemented yet')
 
     
+    def with_input_from_genofile(self, cmd):
+        return "%s < %s" % (cmd, genofile())
+
 class GenGzData(GenData):
     def __init__(self, basename):
         self.gzipped = True
@@ -546,6 +549,9 @@ class GenGzData(GenData):
 
     def count_numsnps(self):
         return None
+    def with_input_from_genofile(self, cmd):
+        return "gunzip -c %s | %s" % (self.genofile(), cmd)
+
 class PedData(GenotypeData):
     """A class for ped format data"""
     def __init__(self, basename):
