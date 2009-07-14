@@ -762,6 +762,9 @@ class ShellFish(CommandLineApp):
         op.add_option('', '--ignore-sge', dest='ignore_sge', default=False, action='store_true',
                       help="Don't use Sun Grid Engine for computations even though it is available")
 
+        op.add_option('', '--version', dest='show_version', default=False, action='store_true',
+                      help="Print version and exit")
+        
         op.add_option('-w', '--wtchg', dest='wtchg', default=False, action='store_true',
                       help="Activate wtchg file naming conventions")
         
