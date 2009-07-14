@@ -1,6 +1,6 @@
 IDIR = "."
 CPPFLAGS = -I $(IDIR)
-CFLAGS = -O2 # -Wall
+CFLAGS = -O2 -Wall
 LDFLAGS = -lm # -static /usr/lib64/libm.a
 
 GENO_OBJS = io.o iogeno.o dan.o 
