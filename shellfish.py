@@ -1056,9 +1056,9 @@ def snptest(cases, controls):
             numprocs, 'es' if numprocs > 1 else ''))
 
     def snptest_chunk_command(xsnp_file, outfile):
-        cmd = '%s -frequentist 1 -hwe ' % exe['snptest']
-        cmd += '-cases %s.gen %s.sample ' % (cases.basename, cases.basename)
-        cmd += '-controls %s.gen %s.sample ' % (controls.basename, controls.basename)
+        cmd = '%s %s -frequentist 1 -hwe ' % (exe['snptest'], '-gen_gz' if gzipped else '')
+        cmd += '-cases %s %s ' % (cases.genofile(), cases.samplefile())
+        cmd += '-controls %s %s ' % (controls.genofile(), controls.samplefile())
         cmd += '-o %s ' % outfile
         cmd += '-exclude_snps %s ' % xsnp_file
         if settings.exclude_indivs_file:
