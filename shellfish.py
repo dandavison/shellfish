@@ -362,10 +362,9 @@ class GenoData(GenotypeData, OneLinePerSNPData):
 
         def snpload_chunk_command(chunk, outfile):
             return "%s -a %d -b %d -N %d -V %d -L %d -g %s -e %s -f %s %s > %s" % \
-                (exe['snpload'], chunk[0], chunk[1],
+                (exe['snpload'], chunk[0] + 1, chunk[1] + 1,
                  self.numindivs, settings.numpcs, self.numsnps,
                  self.genofile(), settings.evecsfile, freqfile, settings.vflag, outfile)
-        
         
         chunks = allocate_chunks(self.numsnps, settings.maxprocs)
         outfiles = pmap(snpload_chunk_command, chunks, 'snpload')
@@ -1049,6 +1048,9 @@ def snptest(cases, controls):
             raise ShellFishError('Snptest data sets must be .gen or .gen.gz')
     if cases.numsnps != controls.numsnps:
         raise ShellFishError('Cases and controls have different numbers of SNPs')
+    numsnps = cases.numsnps
+    chunks = allocate_chunks(numsnps, settings.maxprocs)
+    numprocs = len(chunks)
     log('Performing association tests using %d parallel process%s' % (
             numprocs, 'es' if numprocs > 1 else ''))
 
@@ -1064,14 +1066,15 @@ def snptest(cases, controls):
             cmd += '-chunk %d' % settings.snptest_chunk
         return cmd
 
-    numsnps = cases.numsnps
-    chunks = allocate_chunks(numsnps, settings.maxprocs)
     snpids = cases.get_snpids()
-    xsnp_files = [temp_filename() for p in range(len(chunks))]
-    for p in range(len(chunks)):
-        xsnps = [snpids[l] for l in range(numsnps) if l not in range(*chunks[p])]
-        with open(xsnp_files[p], 'w') as fname:
-            fname.write('\n'.join(xsnps))
+    xsnp_files = [temp_filename() for p in range(numprocs)]
+    
+    def inchunk(l, chunk):
+        return l >= chunk[0] and l <= chunk[1]
+        
+    for p in range(numprocs):
+        xsnps = [snpids[l] for l in range(numsnps) if not inchunk(l, chunks[p])]
+        write_lines(xsnps, xsnp_files[p])
 
     outfiles = pmap(snptest_chunk_command, xsnp_files, 'snptest')
 
