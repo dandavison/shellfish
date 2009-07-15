@@ -808,19 +808,20 @@ class ShellFish(CommandLineApp):
                 log('Data files agree with respect to SNPs and allele encoding')
                 return
                 
-            # If we're doing anything with data2, we're going to want to subset and flip
-            data = data.to_geno()
-            restrict_to_intersection([data, data2])
+            if not settings.snptest:
+                # If we're doing anything with data2, we're going to want to subset and flip
+                data = data.to_geno()
+                restrict_to_intersection([data, data2])
 
-            log('\nFlipping %s to match encoding of %s\n' % (data.basename, data2.basename))
-            data.flip(data2)
+                log('\nFlipping %s to match encoding of %s\n' % (data.basename, data2.basename))
+                data.flip(data2)
 
-            if not data.is_aligned(data2):
-                raise ShellFishError(
-                    'After subsetting and flipping, map files %s and %s differ'+\
-                        'with respect to SNPs and/or allele encoding.' % \
-                        (data.mapfile(), data2.mapfile()))
-            log('Data files agree with respect to SNPs and allele encoding')
+                if not data.is_aligned(data2):
+                    raise ShellFishError(
+                        'After subsetting and flipping, map files %s and %s differ'+\
+                            'with respect to SNPs and/or allele encoding.' % \
+                            (data.mapfile(), data2.mapfile()))
+                log('Data files agree with respect to SNPs and allele encoding')
 
         out_basename = settings.outfile
 
@@ -1043,6 +1044,12 @@ def snptest(cases, controls):
             raise ShellFishError('Snptest data sets must be .gen or .gen.gz')
     if cases.numsnps != controls.numsnps:
         raise ShellFishError('Cases and controls have different numbers of SNPs')
+    if not cases.is_aligned(controls):
+        raise ShellFishError(
+            'Map files %s and %s differ with respect to SNPs and/or allele encoding.' % \
+                (cases.mapfile(), controls.mapfile()))
+    log('Data files agree with respect to SNPs and allele encoding')
+    
     numsnps = cases.numsnps
     chunks = allocate_chunks(numsnps, settings.maxprocs)
     numprocs = len(chunks)
