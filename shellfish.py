@@ -1036,13 +1036,13 @@ def execute(cmd, name):
                    priority=settings.sge_level).execute_in_serial()
     else:
         system('#!/bin/bash\n' + cmd)
-
+        
 def snptest(cases, controls):
-    for data in [cases, controls]:
-        if not isinstance(data, (GenData, GenGzData)):
-            raise ShellFishError('Snptest data sets must be .gen or .gen.gz')
-    if cases.numsnps != controls.numsnps:
-        raise ShellFishError('Cases and controls have different numbers of SNPs')
+    if not isinstance(cases, GenData) and \
+            controls.__class__ is cases.__class__: # i.e. GenData or GenGzData
+        raise ShellFishError(
+            'Snptest data sets must be .gen or .gen.gz, and both must be the same type.')
+    gzipped = isinstance(cases, GenGzData)
     if not cases.is_aligned(controls):
         raise ShellFishError(
             'Map files %s and %s differ with respect to SNPs and/or allele encoding.' % \
