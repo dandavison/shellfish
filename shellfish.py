@@ -447,16 +447,17 @@ class GenData(GenotypeData, OneLinePerSNPData):
         field = dict(chrom=gencol['snpid'], rs=gencol['rs'], cM=None,
                      bp=gencol['bp'], allele1=gencol['allele1'], allele2=gencol['allele2'])
 
-        # Construct a dummy genetic map column
-        cM_file = temp_filename()
-        write_lines(['0'] * self.count_numsnps(), cM_file)
-        
         # Get the last 3 columns
         bp_alleles_file = temp_filename()
         cmd = self.with_input_from_genofile("%s -d' ' -f %d,%d,%d" % (
                 exe['cut'], field['bp'], field['allele1'], field['allele2']))
         cmd += " | perl -pe 's/ /\t/g' > %s" % bp_alleles_file
         execute(cmd, 'cut-gen2map-1')
+        numsnps = count_lines(bp_alleles_file)
+
+        # Construct a dummy genetic map column
+        cM_file = temp_filename()
+        write_lines(['0'] * numsnps, cM_file)
         
         # Cut out the initial columns and paste everything together
         cmd = self.with_input_from_genofile("%s -d' ' -f %d,%d" % (
@@ -466,7 +467,7 @@ class GenData(GenotypeData, OneLinePerSNPData):
         execute(cmd, 'cut-gen2map-2')
 
     def count_numsnps(self):
-        return count_lines(self.genofile())
+        return count_lines(self.mapfile())
 
     def get_snpids(self):
         tempfile = temp_filename()
@@ -527,8 +528,6 @@ class GenGzData(GenData):
     def to_bed(self):
         return self.to_gen().to_bed()
 
-    def count_numsnps(self):
-        return None
     def with_input_from_genofile(self, cmd):
         return "gunzip -c %s | %s" % (self.genofile(), cmd)
 
