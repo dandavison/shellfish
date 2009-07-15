@@ -229,13 +229,12 @@ class GenoData(GenotypeData, OneLinePerSNPData):
                     exe['perl'],
                     genmapfile))
             allelesfile = temp_filename()
-            alleles = '\n'.join(['-\t-'] * self.count_numsnps()) + '\n'
-            with open(allelesfile, 'w') as f: f.write(alleles)
+            alleles = ['-\t-'] * self.count_numsnps()
+            write_lines(alleles, allelesfile)
             system("%s -d' ' %s %s %s > %s" % (
                     exe['paste'], genmapfile, allelesfile, probfile,
                     self.basename + '.gen'))
-        with open(self.basename + '.sample', 'w') as f:
-            f.write(self.make_sample_file_contents())
+        write(self.make_sample_file_contents(), self.basename + '.sample')
         
         if not settings.messy: system('%s %s' % (exe['rm'], self.genofile()))
         return GenData(self.basename)
@@ -375,7 +374,7 @@ class GenoData(GenotypeData, OneLinePerSNPData):
             log("All snpload processes finished: concatenating chunks.")
         self.snpload_file = temp_filename()
         tempfile = temp_filename()
-        write('\n'.join(outfiles), tempfile)
+        write_lines(outfiles, tempfile)
         execute("xargs cat < %s | paste %s %s - > %s" % \
                     (tempfile, self.mapfile(), freqfile, self.snpload_file),
                 name='snpload-cat')
@@ -451,7 +450,7 @@ class GenData(GenotypeData, OneLinePerSNPData):
 
         # Construct a dummy genetic map column
         cM_file = temp_filename()
-        write('\n'.join(['0'] * self.count_numsnps()) + '\n', cM_file)
+        write_lines(['0'] * self.count_numsnps(), cM_file)
         
         # Get the last 3 columns
         bp_alleles_file = temp_filename()
@@ -1077,9 +1076,9 @@ def snptest(cases, controls):
     outfiles = pmap(snptest_chunk_command, xsnp_files, 'snptest')
 
     log("All snptest processes finished: concatenating chunks.")
-    outfile = temp_filename()
     tempfile = temp_filename()
-    write('\n'.join(outfiles), tempfile)
+    write_lines(outfiles, tempfile)
+    outfile = temp_filename()
     concat_cmd = 'unset _shellfish_gothdr\n'
     concat_cmd += 'while read f ; do\n' + \
         '   [ -z "$_shellfish_gothdr" ] && cat $f || sed 1d $f && _shellfish_gothdr=true\n' +\
@@ -1160,9 +1159,8 @@ def restrict_to_intersection(data_objects):
     
 def extract_lines(path, lines, inplace=False):
     linesf = temp_filename()
+    write_lines(map(str, lines), linesf)
     outf = temp_filename()
-    with open(linesf, 'w') as f:
-        f.write('\n'.join(map(str, lines)))
     system('%s -f %s < %s > %s' % (
             exe['lines'], linesf, path, outf))
     if inplace:
