@@ -17,7 +17,7 @@ __progname__ = 'shellfish'
 # Global dict specifying the order of columns in .map files
 mapcol = dict(chrom=1, rs=2, cM=3, bp=4, allele1=5, allele2=6, freq=7, pc1=8)
 # and in .gen files
-gencol = dict(snpid=1, rs=2, bp=3, allele1=4, allele5=5)
+gencol = dict(snpid=1, rs=2, bp=3, allele1=4, allele2=5)
 # a global dict which will be populated with paths to executables
 exe = {}
 
@@ -470,7 +470,7 @@ class GenData(GenotypeData, OneLinePerSNPData):
 
     def get_snpids(self):
         tempfile = temp_filename()
-        cmd = self.with_input_from_genofile('%s -f %d > %s' % (
+        cmd = self.with_input_from_genofile("%s -d' ' -f %d > %s" % (
                 exe['cut'], gencol['snpid'], tempfile))
         execute(cmd, name = 'get_snpids')
         return read_lines(tempfile)
@@ -504,7 +504,7 @@ class GenData(GenotypeData, OneLinePerSNPData):
 
     
     def with_input_from_genofile(self, cmd):
-        return "%s < %s" % (cmd, genofile())
+        return "%s < %s" % (cmd, self.genofile())
 
 class GenGzData(GenData):
     def __init__(self, basename):
@@ -877,7 +877,7 @@ class ShellFish(CommandLineApp):
             if not isinstance(data, GenGzData): data = data.to_gen()
             if not isinstance(data2, GenGzData): data2 = data2.to_gen()
             outfile = snptest(data, data2)
-            system("mv %s %s" % (outfile, out_basename + '.snpload'))
+            system("mv %s %s" % (outfile, out_basename + '.snptest'))
         else:
             raise ShellFishError(self.available_actions_msg)
         
@@ -1044,7 +1044,7 @@ def execute(cmd, name):
 
 def snptest(cases, controls):
     for data in [cases, controls]:
-        if not is_instance(data, (GenData, GenGzData)):
+        if not isinstance(data, (GenData, GenGzData)):
             raise ShellFishError('Snptest data sets must be .gen or .gen.gz')
     if cases.numsnps != controls.numsnps:
         raise ShellFishError('Cases and controls have different numbers of SNPs')
@@ -1059,11 +1059,12 @@ def snptest(cases, controls):
         cmd += '-cases %s.gen %s.sample ' % (cases.basename, cases.basename)
         cmd += '-controls %s.gen %s.sample ' % (controls.basename, controls.basename)
         cmd += '-o %s ' % outfile
-        cmd += '-exclude_snps ' % xsnp_file
+        cmd += '-exclude_snps %s ' % xsnp_file
         if settings.exclude_indivs_file:
             cmd += '-exclude_samples %s ' % settings.exclude_indivs_file
         if settings.snptest_chunk:
-            cmd += '-chunk %d' % settings.snptest_chunk
+            cmd += '-chunk %d ' % settings.snptest_chunk
+        cmd += '> /dev/null'
         return cmd
 
     snpids = cases.get_snpids()
@@ -1086,7 +1087,15 @@ def snptest(cases, controls):
     concat_cmd += 'while read f ; do\n' + \
         '   [ -z "$_shellfish_gothdr" ] && cat $f || sed 1d $f && _shellfish_gothdr=true\n' +\
         'done < %s > %s' % (tempfile, outfile)
+
     execute(concat_cmd, name='snptest-cat')
+
+    # print 'xsnp_files:'
+    # print xsnp_files
+    # print 'concatenated output files were:'
+    # print outfiles
+    # print concat_cmd
+    # sys.exit(2)
     return outfile
 
 def pmap(function, sequence, process_name='pmap'):
