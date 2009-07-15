@@ -498,11 +498,6 @@ class GenData(GenotypeData, OneLinePerSNPData):
         link(old_genofile, self.genofile())
         link(old_samplefile, self.samplefile())
 
-
-    def is_aligned(self, other):
-        raise NotImplementedError('GenData.is_aligned() not implemented yet')
-
-    
     def with_input_from_genofile(self, cmd):
         return "%s < %s" % (cmd, self.genofile())
 
