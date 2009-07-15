@@ -862,7 +862,7 @@ class ShellFish(CommandLineApp):
             if not isfile(settings.evecsfile):
                 raise ShellFishError('Invalid file: %s' % settings.evecsfile)
             data.compute_snploadings()
-            system("mv %s %s" % (data.snpload_file, out_basename + '.snpload'))
+            system("mv %s %s" % (data.snpload_file, out_basename + '.snpload.map'))
         elif settings.project:
             log('Projecting %s onto %d principal components in %s\n' % 
                 (data.basename, settings.numpcs, data2.basename))
