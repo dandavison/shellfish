@@ -57,7 +57,7 @@ class Data(object):
         log('%d SNPs could not be aligned between %s and %s' %
             (numbad, self.basename, target.basename))
         if numbad:
-            print('Warning: %d SNPs could not be aligned' % numbad)
+            log('Warning: %d SNPs could not be aligned' % numbad)
         return flipfile
 
     def flip_mapfile(self, target):
@@ -884,7 +884,7 @@ class ShellFish(CommandLineApp):
             raise ShellFishError('Are you using Windows? %s lives only on linux / unix / OS X.' %
                                  __progname__)
         if settings.show_version:
-            print('%s' % __version__)
+            log('%s' % __version__)
             sys.exit(0)
         settings.vflag = '-v' if settings.verbose else ''
 
@@ -926,7 +926,7 @@ class ShellFish(CommandLineApp):
             set_executables(['snptest'])
 
         if settings.maxprocs > 1 and not settings.sge and not __have_multiprocessing__:
-            print('Failed to import multiprocessing module: '
+            log('Failed to import multiprocessing module: '
                   'parallel computation of covariance matrices is not possible.\n'
                   'To enable, on a single machine with multiple processors,'
                   'either use python version 2.6 or greater, '
@@ -1091,12 +1091,6 @@ def snptest(cases, controls):
 
     execute(concat_cmd, name='snptest-cat')
 
-    # print 'xsnp_files:'
-    # print xsnp_files
-    # print 'concatenated output files were:'
-    # print outfiles
-    # print concat_cmd
-    # sys.exit(2)
     return outfile
 
 def pmap(function, sequence, process_name='pmap'):
@@ -1196,7 +1190,7 @@ def set_executables(cmds):
             exe[cmd] = cmd
             continue
         else:
-            print(repr(exit_status))
+            log(repr(exit_status))
             raise ShellFishError(
                 "The command 'which %s' exited with code %d:"
                 " please ensure that the program '%s' is present in the"
@@ -1261,12 +1255,13 @@ def submatrices(n, maxprocs):
 
 def log(msg, prefix=''):
     if not settings.quiet:
-        print(prefix + msg)
+        sys.stdout.write(prefix + msg)
+        sys.stdout.flush()
 
 if __name__ == '__main__':
     shellfish = ShellFish()
     try:
         shellfish.run()
     except ShellFishError, e:
-        print('shellfish error: %s' % e.value)
+        log('shellfish error: %s' % e.value)
         sys.exit(2)
