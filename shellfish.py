@@ -109,6 +109,7 @@ class GenotypeData(Data):
     formats. These share the same name (i.e. the basename) up to the
     file extension which is .map for the map file, and one of
     {.ped,.bed,.gen,.geno} for the genotypes file.'''
+ 
     def __init__(self, basename, format):
         Data.__init__(self, basename, format)
         self.format = format
@@ -439,7 +440,7 @@ class GenData(GenotypeData, OneLinePerSNPData):
 
     def mapfile(self, create=True):
         mapfile = self.basename + '.map'
-        if not isfile(mapfile): self.create_mapfile()
+        if create and not isfile(mapfile): self.create_mapfile()
         return mapfile
 
     def create_mapfile(self):
