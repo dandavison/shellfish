@@ -951,7 +951,7 @@ class ShellFish(CommandLineApp):
         if os.popen('hostname').read().rstrip() in ['login1-cluster1','login2-cluster1']:
             sge_preamble += 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/users/davison/lib64\n'
         if settings.sge:
-            settings.sgedir = 'shellfish-cluster-jobs-' + datetimenow()
+            settings.sgedir = 'shellfish-cluster-jobs-' + datetimenow() + '-' + str(os.getpid())
             settings.wtchg = True
             SGEprocess.verbose = settings.verbose
             settings.sge_preamble = sge_preamble
