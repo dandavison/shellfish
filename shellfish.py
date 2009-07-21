@@ -438,7 +438,7 @@ class GenData(GenotypeData, OneLinePerSNPData):
             basename = r.sub('_', self.basename, 1)
             return basename + '.sample'
 
-    def mapfile(self):
+    def mapfile(self, create=True):
         mapfile = self.basename + '.map'
         if not isfile(mapfile): self.create_mapfile()
         return mapfile
@@ -499,9 +499,11 @@ class GenData(GenotypeData, OneLinePerSNPData):
     def create_links(self):
         old_genofile = self.genofile()
         old_samplefile = self.samplefile(wtchg=settings.wtchg)
+        old_mapfile = self.mapfile()
         self.basename = temp_filename()
         link(old_genofile, self.genofile())
         link(old_samplefile, self.samplefile())
+        link(old_mapfile, self.mapfile(create=False))
 
     def with_input_from_genofile(self, cmd):
         return "%s < %s" % (cmd, self.genofile())
@@ -842,6 +844,7 @@ class ShellFish(CommandLineApp):
             data = data.to_gen()
             system("mv %s %s" % (data.genofile(), out_basename + '.gen'))
             system("mv %s %s" % (data.samplefile(), out_basename + '.sample'))
+            system("mv %s %s" % (data.mapfile(), out_basename + '.map'))
         elif settings.make_ped:
             data = data.to_ped()
             system("mv %s %s" % (data.genofile(), out_basename + '.ped'))
