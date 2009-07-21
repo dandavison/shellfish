@@ -384,8 +384,7 @@ class GenData(GenotypeData, OneLinePerSNPData):
     used by other related software."""
     def __init__(self, basename):
         if not hasattr(self, 'gzipped'):
-            # hack
-            self.gzipped = False
+            self.gzipped = False # hack
         GenotypeData.__init__(self, basename, '.gen')
         if not isfile(self.samplefile()):
             raise ShellFishError('Missing sample file %s for .gen format data' % self.samplefile())
@@ -466,7 +465,7 @@ class GenData(GenotypeData, OneLinePerSNPData):
                 exe['cut'], field['chrom'], field['rs']))
         cmd += " | perl -pe 's/ /\t/g' | %s - %s %s > %s" % (
             exe['paste'], cM_file, bp_alleles_file, self.basename + '.map')
-        execute(cmd, 'cut-gen2map-2', allow_sge = self.numsnps > settings.sge_min_numsnps)
+        execute(cmd, 'cut-gen2map-2')
         log('Created map ')
 
     def count_numsnps(self):
