@@ -440,7 +440,7 @@ class GenData(GenotypeData, OneLinePerSNPData):
             return basename + '.sample'
     def samplefile_numcols(self):
         with open(self.samplefile(), 'r') as f:
-            pipe =  Popen('head -n1', stdin=f, stdout=PIPE)
+            pipe =  Popen(['head', '-n1'], stdin=f, stdout=PIPE)
             return len(pipe.communicate()[0].split(' '))
     def mapfile(self, create=True):
         mapfile = self.basename + '.map'
