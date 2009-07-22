@@ -4,6 +4,7 @@ import sys, os, re, time, random, codecs
 from cmdline import CommandLineApp
 from util import *
 import insect
+from subprocess import *
 from process import SGEprocess
 try:
     from multiprocessing import Process
@@ -437,7 +438,10 @@ class GenData(GenotypeData, OneLinePerSNPData):
             r = re.compile('_[012MXY][0-9TXY]_')
             basename = r.sub('_', self.basename, 1)
             return basename + '.sample'
-
+    def samplefile_numcols(self):
+        with open(self.samplefile(), 'r') as f:
+            pipe =  Popen('head -n1', stdin=f, stdout=PIPE)
+            return len(pipe.communicate()[0].split(' '))
     def mapfile(self, create=True):
         mapfile = self.basename + '.map'
         if create and not isfile(mapfile): self.create_mapfile()
@@ -1060,6 +1064,10 @@ def snptest(cases, controls):
         raise ShellFishError(
             'Map files %s and %s differ with respect to SNPs and/or allele encoding.' % \
                 (cases.mapfile(), controls.mapfile()))
+    if not cases.samplefile_numcols() == controls.samplefile_numcols():
+        raise ShellFishError(
+            'Sample files %s and %s have different numbers of columns.' % \
+                (cases.samplefile(), controls.samplefile()))
     log('Data files agree with respect to SNPs and allele encoding')
     
     numsnps = cases.numsnps
