@@ -23,11 +23,11 @@ int main(int argc, char *argv[]) {
     char *genotypes_file=NULL, *data_dir=NULL, *indiv_exclude_file=NULL, *snp_exclude_file=NULL, 
 	*freqs_file=NULL, *outdir=NULL, 
 	**fnames, outfile[100], *version_string="0.0" ;
-    bool symmetric, *indiv_include, *snp_include, *xinclude, *yinclude, verbose=FALSE ;
+    bool symmetric, *indiv_include, *snp_include, *xinclude, *yinclude, verbose=FALSE, real=FALSE ;
     FILE *fp ;
     double *x, *y, *freqs_inc, *cov ;
 
-    while((ch = getopt(argc, argv, "a:b:c:d:N:n:L:l:g:i:f:I:S:o:v")) != -1) {
+    while((ch = getopt(argc, argv, "a:b:c:d:N:n:L:l:g:i:f:I:S:o:rv")) != -1) {
 	switch(ch) {
 	case 'a':
 	    a = atoi(optarg) - 1 ; break ; // indexing from 1 in shell
@@ -59,6 +59,8 @@ int main(int argc, char *argv[]) {
 	    snp_exclude_file = optarg ; break ;
 	case 'o':
 	    outdir = optarg ; break ;
+	case 'r':
+	    real = TRUE ; break ;
 	case 'v':
 	    verbose = TRUE ; break ;
 	case '?':
@@ -77,7 +79,11 @@ int main(int argc, char *argv[]) {
 /*     } */
     assert(a >= 0 && b > a && c < d && d <= b) ;
     assert(b <= n_tot && d <= n_tot) ;
-    
+    if(!real) {
+	assert(freqs_file == NULL) ;
+	assert(data_dir == NULL) ;
+    }
+
     if(c == a) {
 	assert(d == b) ;
 	symmetric = TRUE ;
@@ -96,15 +102,16 @@ int main(int argc, char *argv[]) {
     
     if(verbose) {
 	PRINT("%s\tgenocov version %s\n", timestring(), version_string) ; fflush(stdout) ;
+	PRINT("%s-valued data\n", real ? "real" : "discrete") ;
 	PRINT("[a,b) = [%d,%d) -> nx = %d\n", a, b, nx) ;
 	PRINT("[c,d) = [%d,%d) -> ny = %d\n", c, d, ny) ;
 	PRINT("symmetric = %s\n", symmetric ? "TRUE" : "FALSE") ;
 	PRINT("n_tot = %d\t", n_tot) ;
 	PRINT("L_tot = %d\t", L_tot) ;
 	PRINT("L_inc = %d\n", L_inc) ;
-	PRINT("genotypes file = %s\n", genotypes_file) ;
+	PRINT("data file = %s\n", genotypes_file) ;
 	PRINT("data dir = %s\n", data_dir) ;
-	PRINT("freqs file = %s\n", freqs_file) ;
+	if(!real) PRINT("freqs file = %s\n", freqs_file) ;
 	PRINT("indiv exclude file = %s\n", indiv_exclude_file) ;
 	PRINT("SNP exclude file = %s\n", snp_exclude_file) ;
 	PRINT("outdir = %s\n", outdir) ;
@@ -116,22 +123,21 @@ int main(int argc, char *argv[]) {
     if(verbose) PRINT("setting SNP inclusion\n") ;
     snp_include = make_include_vector(snp_exclude_file, L_tot, L_inc) ;
     
-    if(verbose) PRINT("reading freqs\n") ;
-    freqs_inc = make_freqs_vector(freqs_file, L_tot, L_inc, snp_include) ;
-
-    if(verbose) {
+    if(!real) {
+	if(verbose) PRINT("reading freqs\n") ;
+	freqs_inc = make_freqs_vector(freqs_file, L_tot, L_inc, snp_include) ;
 	PRINT("%s\t/* First %d entries of freqs: */\n", timestring(), MIN(10, L_inc)) ;
 	for(i = 0 ; i < MIN(10, L_inc) ; i++) PRINT("%lf ", freqs_inc[i]) ;
 	putchar('\n') ;
-    }
+
+	nmono = set_monomorphs_for_exclusion(snp_include, freqs_inc, L_tot, L_inc) ;
     
-    nmono = set_monomorphs_for_exclusion(snp_include, freqs_inc, L_tot, L_inc) ;
-    
-    if(nmono > 0) {
-	if(verbose) PRINT("excluding %d monomorphs\n", nmono) ;
-	L_inc -= nmono ;
-	FREE(freqs_inc) ;
-	freqs_inc = make_freqs_vector(freqs_file, L_tot, L_inc, snp_include) ;
+	if(nmono > 0) {
+	    if(verbose) PRINT("excluding %d monomorphs\n", nmono) ;
+	    L_inc -= nmono ;
+	    FREE(freqs_inc) ;
+	    freqs_inc = make_freqs_vector(freqs_file, L_tot, L_inc, snp_include) ;
+	}
     }
     
     /* 
@@ -170,31 +176,40 @@ int main(int argc, char *argv[]) {
 	else yinclude[i_tot] = FALSE ;
     }
     
-    if(verbose) PRINT("%s\treading genotypes for %d individuals at %d SNPs\n",
+    if(verbose) PRINT("%s\treading data for %d individuals at %d SNPs\n",
 		      timestring(), nx, L_inc) ;
     
     if(genotypes_file != NULL) {
 	// this results in x being n_tot x L_inc, column major
 	x = ALLOC(L_inc * nx, double) ;
 	fp = fopen(genotypes_file, "r") ;
-	read_submatrix_genotypes_double_transpose(fp,
-						  n_tot, xinclude, nx,
-						  L_tot, snp_include, L_inc,
-						  x) ;
+	if (real) read_submatrix_transpose_double(     fp,
+						       n_tot, xinclude, nx,
+						       L_tot, snp_include, L_inc,
+						       "%lf", x) ;
+	else read_submatrix_genotypes_double_transpose(fp,
+						       n_tot, xinclude, nx,
+						       L_tot, snp_include, L_inc,
+						       x) ;
 	fclose(fp) ;
     }
-    else x = read_genotypes(fnames, L_tot, L_inc, snp_include, n_tot, nx, xinclude, TRUE) ;
-    
+    else {
+	assert(!real) ;
+	x = read_genotypes(fnames, L_tot, L_inc, snp_include, n_tot, nx, xinclude, TRUE) ;
+    }
+
     if(verbose) {
 	PRINT("%s\t/* First %d entries of genotypes x: */\n", timestring(), MIN(nx*L_inc,10)) ;
 	for(i = 0 ; i < MIN(nx*L_inc,10) ; i++) PRINT("%lf ", x[i]) ;
 	putchar('\n') ;
-	PRINT("%s\tcentering and scaling %d x %d genotype matrix\n", timestring(), L_inc, nx) ;
     }
-    centre_and_zero_missing_and_scale(x, L_inc, nx, freqs_inc) ;
-
+    if(!real) {
+	PRINT("%s\tcentering and scaling %d x %d genotype matrix\n", timestring(), L_inc, nx) ;
+	centre_and_zero_missing_and_scale(x, L_inc, nx, freqs_inc) ;
+    }
     if(verbose) {
-	PRINT("%s\t/* First %d entries of scaled genotypes x: */\n", timestring(), MIN(nx*L_inc,10)) ;
+	PRINT("%s\t/* First %d entries of data before covariance computation: */\n",
+	      timestring(), MIN(nx*L_inc,10)) ;
 	for(i = 0 ; i < MIN(nx*L_inc,10) ; i++) PRINT("%lf ", x[i]) ;
 	putchar('\n') ;
     }
@@ -205,23 +220,33 @@ int main(int argc, char *argv[]) {
 	cov = XTX(x, L_inc, nx, 1.0 / L_inc) ;
     }
     else {
-	if(verbose) PRINT("%s\treading genotypes for %d individuals at %d SNPs\n", timestring(), nx, L_inc) ;
+	if(verbose) PRINT("%s\treading data for %d individuals at %d SNPs\n",
+			  timestring(), nx, L_inc) ;
 	if(genotypes_file != NULL) {
 	    y = ALLOC(L_inc * ny, double) ;
 	    fp = fopen(genotypes_file, "r") ;
-	    read_submatrix_genotypes_double_transpose(fp,
-						      n_tot, yinclude, ny,
-						      L_tot, snp_include, L_inc,
-						      y) ;
+	    
+	    if(real) read_submatrix_transpose_double(      fp,
+							   n_tot, yinclude, ny,
+							   L_tot, snp_include, L_inc,
+							   "%lf", y) ;
+
+	    else read_submatrix_genotypes_double_transpose(fp,
+							   n_tot, yinclude, ny,
+							   L_tot, snp_include, L_inc,
+							   y) ;
 	    fclose(fp) ;
     	}
-	else y = read_genotypes(fnames, L_tot, L_inc, snp_include, n_tot, ny, yinclude, TRUE) ;
-
-	if(verbose) PRINT("%s\tcentering and scaling %d x %d genotype matrix\n",
-			  timestring(), L_inc, ny) ;
-
-	centre_and_zero_missing_and_scale(y, L_inc, ny, freqs_inc) ;
+	else {
+	    assert(!real) ;
+	    y = read_genotypes(fnames, L_tot, L_inc, snp_include, n_tot, ny, yinclude, TRUE) ;
+	}
 	
+	if(!real) {
+	    if(verbose) PRINT("%s\tcentering and scaling %d x %d genotype matrix\n",
+			      timestring(), L_inc, ny) ;
+	    centre_and_zero_missing_and_scale(y, L_inc, ny, freqs_inc) ;
+	}
 	if(verbose) PRINT("%s\tforming crossproduct: t([%d,%d]) %%*%% [%d,%d] \n",
 			  timestring(), L_inc, nx, L_inc, ny) ;
 	cov = matprod(x, y, TRUE, FALSE, L_inc, nx, L_inc, ny, 1.0 / L_inc) ;
@@ -231,7 +256,7 @@ int main(int argc, char *argv[]) {
     FREE(x) ;
     FREE(xinclude) ;
     FREE(snp_include) ;
-    FREE(freqs_inc) ;
+    if(!real) FREE(freqs_inc) ;
     
     if(verbose) PRINT("%s\twriting %d columns in dir %s/\n",
 		      timestring(), symmetric ? nx : ny, outdir) ;
