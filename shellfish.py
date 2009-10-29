@@ -12,7 +12,7 @@ except:
     __have_multiprocessing__ = False
     from process import Process
 
-__version__ = '0.0.5'
+__version__ = '0.0.7'
 __progname__ = 'shellfish'
 # Global dict specifying the order of columns in .map files
 mapcol = dict(chrom=1, rs=2, cM=3, bp=4, allele1=5, allele2=6, freq=7, pc1=8)
@@ -192,6 +192,8 @@ class GenoData(GenotypeData, OneLinePerSNPData):
     def __init__(self, basename):
         GenotypeData.__init__(self, basename, '.geno')
         self.split_data_dir = None
+        self.real = False
+
     def to_bed(self):
         return self.to_gen().to_bed()
 
@@ -280,22 +282,26 @@ class GenoData(GenotypeData, OneLinePerSNPData):
     def compute_covariance_matrix(self):
         """Carry out PCA of the matrix of genotype data."""
         
-        freqfile = temp_filename()
-        system("%s -n %d < %s > %s" %
-               (exe['sstat'], self.numindivs, self.genofile(), freqfile))
+        if not self.real:
+            freqfile = temp_filename()
+            system("%s -n %d < %s > %s" %
+                   (exe['sstat'], self.numindivs, self.genofile(), freqfile))
+
         outdir = temp_filename()
         os.mkdir(outdir)
 
         submats = submatrices(self.numindivs, settings.maxprocs)
         def submatrix_cmd(i):
             submat = submats[i]
-            return "%s -a %d -b %d -c %d -d %d -N %d -L %d -l %d %s %s -f %s -o %s %s" % \
+            return "%s %s -a %d -b %d -c %d -d %d -N %d -L %d -l %d %s %s %s -o %s %s" % \
                 (exe['genocov'], \
+                     '-r' if self.real else '', \
                      submat[0][0], submat[0][1], submat[1][0], submat[1][1], \
                      self.numindivs, self.numsnps, self.numsnps, \
                      '-i' if self.split_data_dir else '-g', \
                      self.split_data_dir or self.genofile(), \
-                     freqfile, outdir, settings.vflag)
+                     '' if self.real else '-f %s' % freqfile, \
+                     outdir, settings.vflag)
         
         if settings.sge:
             def make_sge_process(i):
@@ -417,6 +423,49 @@ class GenoData(GenotypeData, OneLinePerSNPData):
                     (outdir, self.mapfile(), freqfile, self.snpload_file),
                 name='snpload-cat-%s' % os.getpid())
 
+class RealValuedData(GenoData):
+    """A class for real valued data. Input files have one line per SNP
+    and each line contains one real number per individual, separated
+    by spaces or tabs."""
+    def __init__(self, basename):
+        GenotypeData.__init__(self, basename, '.matrix')
+        self.real = True
+        # HACK
+        settings.split_data = False
+        settings.split_data_dir = False
+        self.split_data_dir = None
+
+    def to_bed(self):
+        raise ShellFishError("Can't convert real-valued data to .bed format")
+
+    def to_ped(self):
+        raise ShellFishError("Can't convert real-valued data to .ped format")
+
+    def to_gen(self):
+        raise ShellFishError("Can't convert real-valued data to .gen format")
+
+    def to_geno(self):
+        # Leaving this for the time-being
+        return self
+
+    def flip(self, target):
+        raise ShellFishError("Can't flip real-valued data.")
+
+    def count_numindivs(self):
+        with open(self.genofile()) as f:
+            return len(f.readline().split())
+        
+    def make_sample_file_contents(self):
+        raise ShellFishError("Can't make sample file contents for real-valued data.")
+
+    def split_data(self):
+        raise NotImplementedError(
+            "Splitting into per-individual files not implemented for real-valued data.")
+        
+    def compute_snploadings(self):
+        raise NotImplementedError(
+            "SNP loadings computation not implemented for real-valued data")
+        
 class GenData(GenotypeData, OneLinePerSNPData):
     """A class for data sets in the .gen format created by chiamo and
     used by other related software."""
@@ -676,8 +725,8 @@ class ShellFishLinkError(ShellFishError):
                       'Delete any such files before running again.') % (target, link, __progname__)
 
 class ShellFish(CommandLineApp):
-    data_classes = dict(zip(['.gen', '.gen.gz', '.geno', '.ped', '.bed'],
-                            [GenData, GenGzData, GenoData, PedData, BedData]))
+    data_classes = dict(zip(['.matrix', '.gen', '.gen.gz', '.geno', '.ped', '.bed'],
+                            [RealValuedData, GenData, GenGzData, GenoData, PedData, BedData]))
 
     def __init__(self):
         CommandLineApp.__init__(self)
@@ -802,7 +851,7 @@ class ShellFish(CommandLineApp):
 
         data = self.data_classes[format](basename)
         data.create_links()
-        log('File1: found %s format genotype data with %s individuals and %s SNPs' %
+        log('File1: found %s format data with %s individuals and %s SNPs' %
             (data.format,
              str(data.numindivs) if data.numindivs is not None else 'unknown number of',
              str(data.numsnps) if data.numsnps is not None else 'unknown number of'))
@@ -989,7 +1038,7 @@ class ShellFish(CommandLineApp):
             nvalid = filter(None, isvalid)
             if len(nvalid) > 1:
                 raise ShellFishError(
-                    'Found more than one genotype file format corresponding to basename %s' \
+                    'Found more than one data file format corresponding to basename %s' \
                         % basename)
             else:
                 format = self.data_classes.keys()[which(isvalid)[0]]
@@ -1013,7 +1062,7 @@ class ShellFish(CommandLineApp):
                     "use e.g. perl -pi.backup -e 's/ +/\t/g' %s" % mapfile)
 
         if format:
-            log('Found %s format genotype data %s' %
+            log('Found %s format data %s' %
                 (format, basename + format))
         if mapfile:
             log('Found %smapfile %s' % 
