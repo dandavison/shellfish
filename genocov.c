@@ -8,22 +8,27 @@
 int main(int argc, char *argv[]) {
  
     /*
-      Read in data for two sets of individuals, corresponding to one contiguous block of
-      the full individual-individual covariance matrix, and compute that block of the
-      covariance matrix, after the Patterson et al. centering, zeroing missing data and
-      scaling procedure.
+      Read in data for two sets of individuals, corresponding to one
+      contiguous block of the full individual-individual covariance
+      matrix, and compute that block of the covariance
+      matrix. Genotype data are subject to the centering, zeroing
+      missing data and scaling procedure of Patterson et al.
     
-      Write each column of the sub-matrix (only those elements in lower triangle of full matrix) 
-      to a separate file, with a suffix indicating the position of that column in the full column
-      of the full cov matrix, so that cat * outputs the full lower triangle of the cov matrix in
-      column major order when all submatrices have been computed.
+      Write each column of the sub-matrix (only those elements in
+      lower triangle of full matrix) to a separate file, with a suffix
+      indicating the position of that column in the full column of the
+      full cov matrix, so that cat * outputs the full lower triangle
+      of the cov matrix in column major order when all submatrices
+      have been computed.
     */
     
     int a, b, c, d, i, i_tot, j_tot, nx, ny, n_tot, n_inc, L_tot, L_inc, ch, nmono ;
-    char *genotypes_file=NULL, *data_dir=NULL, *indiv_exclude_file=NULL, *snp_exclude_file=NULL, 
+    char *genotypes_file=NULL, *data_dir=NULL,
+	*indiv_exclude_file=NULL, *snp_exclude_file=NULL, 
 	*freqs_file=NULL, *outdir=NULL, 
 	**fnames, outfile[100], *version_string="0.0" ;
-    bool symmetric, *indiv_include, *snp_include, *xinclude, *yinclude, verbose=FALSE, real=FALSE ;
+    bool symmetric, *indiv_include, *snp_include, *xinclude, *yinclude,
+	verbose=FALSE, real=FALSE ;
     FILE *fp ;
     double *x, *y, *freqs_inc, *cov ;
 
