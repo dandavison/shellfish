@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
 /*     } */
     assert(a >= 0 && b > a && c < d && d <= b) ;
     assert(b <= n_tot && d <= n_tot) ;
-    if(!real) {
+    if(real) {
 	assert(freqs_file == NULL) ;
 	assert(data_dir == NULL) ;
     }
