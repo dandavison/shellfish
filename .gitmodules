@@ -1,0 +1,9 @@
+[submodule "iogeno"]
+	path = iogeno
+	url = /home/dan/src/iogeno
+[submodule "cmdline"]
+	path = cmdline
+	url = /usr/local/src/cmdline
+[submodule "dedpy"]
+	path = dedpy
+	url = /home/dan/src/dedpy

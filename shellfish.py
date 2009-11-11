@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 from __future__ import with_statement
 import sys, os, re, time, random, codecs
-from cmdline import CommandLineApp
-from util import *
+from cmdline.cmdline import CommandLineApp
+from dedpy.ded import *
 import insect
 from subprocess import *
 from process import SGEprocess
