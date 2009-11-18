@@ -7,3 +7,6 @@
 [submodule "dedpy"]
 	path = dedpy
 	url = /home/dan/src/dedpy
+[submodule "insect"]
+	path = insect
+	url = /home/dan/src/tools/insect
