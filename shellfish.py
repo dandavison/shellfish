@@ -21,7 +21,7 @@ from cmdline.cmdline import CommandLineApp
 from dedpy.ded import *
 import insect.insect as insect
 from subprocess import *
-from process import SGEprocess
+from process.process import SGEprocess
 try:
     from multiprocessing import Process
     __have_multiprocessing__ = True

@@ -10,3 +10,6 @@
 [submodule "insect"]
 	path = insect
 	url = /home/dan/src/tools/insect
+[submodule "process"]
+	path = process
+	url = /home/dan/src/tools/process
