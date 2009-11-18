@@ -846,8 +846,6 @@ class ShellFish(CommandLineApp):
         log('shellfish version %s' % __version__, timestamp=False)
         # log("\n%s %s\n" % self.option_parser.parse_args(), timestamp = False)
 
-        # This is a fucking mess.
-
         basename, format = self.process_input_files(settings.file1)
         if format is None:
             raise ShellFishError('Failed to find genotypes file for basename %s' % basename)
