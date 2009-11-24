@@ -1,0 +1,1 @@
+../../../src/iogeno/istat.c

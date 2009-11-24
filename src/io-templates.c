@@ -1,0 +1,1 @@
+../dedc/io-templates.c
