@@ -16,3 +16,6 @@
 [submodule "dedc"]
 	path = dedc
 	url = /home/dan/src/dedc
+[submodule "iogeno"]
+	path = iogeno
+	url = /home/dan/src/iogeno
