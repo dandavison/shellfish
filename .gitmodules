@@ -19,3 +19,6 @@
 [submodule "iogeno"]
 	path = iogeno
 	url = /home/dan/src/iogeno
+[submodule "lines"]
+	path = lines
+	url = /home/dan/src/tools/lines

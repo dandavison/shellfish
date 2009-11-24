@@ -1,1 +1,1 @@
-../../../src/tools/lines/lines.c
+../lines/lines.c
