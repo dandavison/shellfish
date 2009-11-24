@@ -1,1 +1,1 @@
-../../../src/iogeno/flipind.c
+../iogeno/flipind.c

@@ -1,1 +1,1 @@
-../../../src/iogeno/sstat.c
+../iogeno/sstat.c

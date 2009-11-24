@@ -1,1 +1,1 @@
-../../../src/iogeno/istat.c
+../iogeno/istat.c

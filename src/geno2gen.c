@@ -1,1 +1,1 @@
-../../../src/iogeno/geno2gen.c
+../iogeno/geno2gen.c

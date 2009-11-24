@@ -1,1 +1,1 @@
-../../../src/iogeno/iogeno.c
+../iogeno/iogeno.c

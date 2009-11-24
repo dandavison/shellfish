@@ -1,1 +1,1 @@
-../../../src/iogeno/flipgeno.c
+../iogeno/flipgeno.c
