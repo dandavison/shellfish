@@ -13,3 +13,9 @@
 [submodule "process"]
 	path = process
 	url = /home/dan/src/tools/process
+[submodule "blas-lapack"]
+	path = blas-lapack
+	url = /home/dan/src/blas-lapack
+[submodule "dedc"]
+	path = dedc
+	url = /home/dan/src/dedc
