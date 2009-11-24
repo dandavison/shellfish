@@ -22,3 +22,6 @@
 [submodule "lines"]
 	path = lines
 	url = /home/dan/src/tools/lines
+[submodule "columns"]
+	path = columns
+	url = /home/dan/src/tools/columns

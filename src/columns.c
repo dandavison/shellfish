@@ -1,1 +1,1 @@
-../../../src/tools/columns/columns.c
+../columns/columns.c

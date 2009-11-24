@@ -1,1 +1,1 @@
-../../../src/tools/columns/columns-split.c
+../columns/columns-split.c
