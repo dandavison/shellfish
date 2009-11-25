@@ -3,6 +3,8 @@ include make.config
 BINDIR = ../bin
 IDIR = .
 CPPFLAGS = -I $(IDIR)
+CFLAGS = -O2
+LDFLAGS = -lm -lgfortran
 GENO_OBJS = io.o iogeno.o dan.o 
 GENO_EXECS = sstat istat flipind flipgen flipgeno gen2geno geno2gen
 LA_EXECS = project snpload genocov coveigen
