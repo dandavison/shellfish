@@ -1,0 +1,9 @@
+[submodule "cmdline"]
+	path = cmdline
+	url = /usr/local/src/cmdline
+[submodule "ded-py"]
+	path = ded-py
+	url = /home/dan/src/ded-py
+[submodule "dedpy"]
+	path = dedpy
+	url = /home/dan/src/dedpy

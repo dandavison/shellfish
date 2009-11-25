@@ -1,0 +1,3 @@
+[submodule "dedpy"]
+	path = dedpy
+	url = /home/dan/src/dedpy
