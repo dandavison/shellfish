@@ -1,5 +1,6 @@
 include make.config
 
+BINDIR = ../bin
 IDIR = .
 CPPFLAGS = -I $(IDIR)
 GENO_OBJS = io.o iogeno.o dan.o 
@@ -8,9 +9,8 @@ LA_EXECS = project snpload genocov coveigen
 EXECS = lines columns columns-split $(GENO_EXECS) $(LA_EXECS)
 LA_LIBS = $(LBLAS) $(LLAPACK) $(SHELLFISH_LDIR)/libcblas.a
 
-
 all:		$(EXECS)
-		cp $(EXECS) ..
+		mv $(EXECS) $(BINDIR)
 
 $(GENO_EXECS):	$(GENO_OBJS)
 $(LA_EXECS):	$(GENO_OBJS) blas-lapack-dan.o $(LA_LIBS)
@@ -21,4 +21,4 @@ io.o:		io.c io-templates.c io.h
 
 clean:		
 		rm -f *.o $(EXECS)
-		cd .. && rm -f $(EXECS)
+		cd $(BINDIR) && rm -f $(EXECS)
