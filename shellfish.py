@@ -618,7 +618,7 @@ class PedData(GenotypeData):
             system('%s -f1-4 < %s > %s' % (
                     exe['cut'], self.mapfile(), restricted_mapfile))
             system('%s %s %s' % (exe['mv'], restricted_mapfile, self.mapfile()))
-        system('%s --file %s --make-bed --missing-genotype %s >> %s' % 
+        system('%s --noweb --file %s --make-bed --missing-genotype %s >> %s' % 
                (exe['plink'], self.basename, settings.missing_code, settings.logfile))
         system('mv plink.bed %s' % self.basename + '.bed')
         system('mv plink.bim %s' % self.basename + '.bim')
@@ -662,7 +662,7 @@ class BedData(GenotypeData):
 
     def to_ped(self):
         log('Format conversion: bed -> ped')
-        system('%s --bfile %s --recode --missing-genotype %s >> %s' % 
+        system('%s --noweb --bfile %s --recode --missing-genotype %s >> %s' % 
                (exe['plink'], self.basename, settings.missing_code, settings.logfile))
         system('%s %s %s' % (exe['mv'], 'plink.ped', self.basename + '.ped'))
         system('%s %s %s' % (exe['mv'], 'plink.map', self.basename + '.map'))
