@@ -27,7 +27,7 @@ try:
     __have_multiprocessing__ = True
 except:
     __have_multiprocessing__ = False
-    from process import Process
+    from process.process import Process
 
 __version__ = '0.0.8'
 __progname__ = 'shellfish'
