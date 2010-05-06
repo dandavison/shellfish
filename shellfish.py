@@ -773,6 +773,9 @@ class ShellFish(CommandLineApp):
         op.add_option('', '--snptest-chunk', dest='snptest_chunk', default=None, type='int',
                       help="snptest chunk size (default 100)")
 
+        op.add_option('--snptest-opts', dest='snptest_opts', type='string', default='',
+                      help='Options to pass to snptest')
+
         op.add_option('', '--flip', dest='flip', default=False, action='store_true',
                       help='Flip file1 input data to match allele encoding of file2')
 
@@ -1149,6 +1152,7 @@ def snptest(cases, controls):
             cmd += '-exclude_samples %s ' % settings.exclude_indivs_file
         if settings.snptest_chunk:
             cmd += '-chunk %d ' % settings.snptest_chunk
+        cmd += settings.snptest_opts
         # cmd += '> /dev/null'
         return cmd
 
