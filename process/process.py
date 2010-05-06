@@ -86,7 +86,7 @@ class SGEprocess(Process):
         while not os.path.exists(self.errfile):
             if self.verbose: print('%s: waiting for error output' % self.name)
             time.sleep(10)
-        self.exitcode = ded.count_lines(self.errfile)
+        self.exitcode = dedpy.count_lines(self.errfile)
 
     def execute_in_serial(self):
         self.start()
