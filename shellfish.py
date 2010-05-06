@@ -1103,8 +1103,6 @@ class ShellFish(CommandLineApp):
         system('rm -rf %s' % temp_storage_dir())
 
     def handleMainException(self):
-        if not settings.messy:
-            self.cleanup()
         raise
 
 
