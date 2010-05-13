@@ -12,6 +12,7 @@ EXECS = lines columns columns-split $(GENO_EXECS) $(LA_EXECS)
 LA_LIBS = $(LBLAS) $(LLAPACK) $(SHELLFISH_LDIR)/libcblas.a
 
 all:		$(EXECS)
+		mkdir -p $(BINDIR)
 		mv $(EXECS) $(BINDIR)
 
 $(GENO_EXECS):	$(GENO_OBJS)
