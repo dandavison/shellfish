@@ -15,11 +15,12 @@ import dedpy.ded as ded
 __verbose__ = False
 
 class Insect(object):
-    def __init__(self, paths, field, delim='\t', inplace=False, outdir='.', exe={}):
+    def __init__(self, paths, field, delim='\t', inplace=False, outdir='.', unique=False, exe={}):
         self.paths = paths
         self.field = field
         self.delim = delim
         self.inplace = inplace
+        self.unique = unique
         self.outdir = outdir
         self.exe = exe or dict(match='match', lines='lines')
         self.sanity_check()
@@ -30,6 +31,10 @@ class Insect(object):
 
     def insect(self):
 
+        # Create output file names
+        insect_files = [os.path.join(self.outdir, os.path.basename(p) + '.insect') 
+                        for p in self.paths]
+
         # Create files containing the keys
         keyfiles = [temp_filename() for p in self.paths]
         for input_file, keyfile in zip(self.paths, keyfiles):
@@ -39,20 +44,25 @@ class Insect(object):
         # Create sorted versions of keyfiles and check keys are unique
         sorted_keyfiles = [temp_filename() for p in self.paths]
         for keyfile, sorted_keyfile in zip(keyfiles, sorted_keyfiles):
-            system("sort %s > %s" % (
-                    keyfile, sorted_keyfile))
-            dups = os.popen('uniq -d %s' % sorted_keyfile).read()
-            if dups:
-                print(dups)
-                raise Exception('The selected column contains duplicate entries')
-                      
-        # Reduce these to their intersection
+            if self.unique:
+                system("sort %s | uniq > %s" % (keyfile, sorted_keyfile))
+            else:
+                system("sort %s > %s" % (keyfile, sorted_keyfile))
+                dups = os.popen('uniq -d %s' % sorted_keyfile).read()
+                if dups:
+                    print(dups)
+                    raise Exception('The selected column contains duplicate entries')
+                
+        # Restrict these to their intersection
         insect_keyfile = temp_filename()
-        cmd = 'comm -12 %s %s' % (sorted_keyfiles[0], sorted_keyfiles[1])
-        for sorted_keyfile in sorted_keyfiles[2:]:
-            cmd += ' | comm -12 - %s' % sorted_keyfile
-        cmd += ' > %s' % insect_keyfile
-        system(cmd)
+        if len(self.paths) == 1:
+            os.symlink(sorted_keyfiles[0], insect_keyfile)
+        else:
+            cmd = 'comm -12 %s %s' % (sorted_keyfiles[0], sorted_keyfiles[1])
+            for sorted_keyfile in sorted_keyfiles[2:]:
+                cmd += ' | comm -12 - %s' % sorted_keyfile
+            cmd += ' > %s' % insect_keyfile
+            system(cmd)
         
         # Find the indices of the intersecting lines in each of the
         # unsorted keyfiles
@@ -69,9 +79,6 @@ class Insect(object):
                     indexfiles[0], indexfile, sorted_indexfile))
 
         # Extract those lines from the original files
-        insect_files = [os.path.join(self.outdir, os.path.basename(p) + '.insect') 
-                        for p in self.paths]
-
         for sorted_indexfile, input_file, insect_file in \
                 zip(sorted_indexfiles, self.paths, insect_files):
             system('%s -f %s < %s > %s' % (
@@ -104,7 +111,7 @@ if __name__ == '__main__':
         def __init__(self):
             CommandLineApp.__init__(self)
             op = self.option_parser
-            usage = 'usage: %s file1 file2 [file3 ...]' % os.path.basename(sys.argv[0])
+            usage = 'usage: %s file [file ...]' % os.path.basename(sys.argv[0])
             op.set_usage(usage)
     
             op.add_option('-f', '--field', dest='field', default=None, type='int',
@@ -121,7 +128,11 @@ if __name__ == '__main__':
                               'Defaults to current directory.' +\
                               'The output files are given the name of the corresponding ' + \
                               'input file, with the suffix .insect')
-    
+
+            op.add_option('-u', '--unique', dest='unique', default=False, action='store_true',
+                          help='Restrict keys to unique values before insecting. ' + \
+                              'Duplicate keys result in an error unless this option is in force.')
+
         def run(self):
             """We override the standard CommandLineApp.run(), because it
             doesn't seem to allow a variable length argument list for
@@ -137,7 +148,8 @@ if __name__ == '__main__':
                    field=self.options.field,
                    delim=self.options.delim,
                    inplace=self.options.inplace,
-                   outdir=self.options.outdir).insect()
+                   outdir=self.options.outdir,
+                   unique=self.options.unique).insect()
 
     app = InsectApp()
     app.run()
