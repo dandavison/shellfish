@@ -1,0 +1,67 @@
+#!/usr/bin/perl
+
+## slice tabular data
+## Dan Davison 2008-08
+
+use Getopt::Long ;
+
+GetOptions(
+    'column-file|c=s' => \$cfile, ## file containing column numbers, one per line
+    'delim|d=s' => \$delim,       ## column delimiter, defaults to single space character
+    'line-file|l=s' => \$lfile,   ## file containing line numbers, one per line
+    'nospace|n' => \$nospace,     ## -n flag means each column is one character wide with no spaces
+    'inverse|v' => \$inverse      ## -v inverts the match
+    ) ;
+
+$delim = ($nospace ? '' : ' ') unless $delim ;
+
+if( $lfile ) {
+    open(LINE_INDICES, $lfile) or die "Can't open $lfile: $!\n" ;
+    @lines = <LINE_INDICES> ;
+    for($i = 1 ; $i < @lines ; $i++) { 
+	$lines[$i] > $lines[$i-1] or die "line numbers must be strictly increasing" ;
+    }
+}
+if( $cfile ) {
+    open(COLUMN_INDICES, $cfile)  or die "Can't open $cfile: $!\n" ;
+    @columns = <COLUMN_INDICES> ;
+    $inverse and @columns = sort @columns ; # What does the order mean if you're inverting the match?
+}
+
+$i = 0 ;
+while( <> ) {
+    if( $inverse ) { ## output line unless it's the next one in lfile
+	if( $lfile and $i++ == $lines[$l] - 1 ) {
+	    $l++ ;
+	    next ;
+	}
+    }
+    else {
+	next if $lfile and $i++ != $lines[$l] - 1 ;
+	$l++ ;
+    }
+    $cfile or print and next ;
+    chomp ;
+    @row = split $delim ;
+    ## FIXME both these branches usually print $delim after the last column
+    if($inverse) {
+	$outcol = $notfirstcol = 0 ;
+	for($j = 0 ; $j < @row ; $j++) {
+	    if($j == $columns[$outcol] - 1) {
+		$outcol++ ;
+		next ;
+	    }
+	    print $delim if $notfirstcol++ ;
+	    print $row[$j] ;
+	}
+    }
+    else {
+	for($j = 0 ; $j < @columns ; $j++) {
+	    print $delim if($j > 0) ;
+	    print $row[$columns[$j] - 1] ;
+	}
+    }
+    print "\n" ;
+}
+
+exit 0 ;
