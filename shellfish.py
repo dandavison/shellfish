@@ -799,7 +799,7 @@ class ShellFish(CommandLineApp):
                       help="Print shell commands corresponding to action," + \
                           "but don't actually do anything")
 
-        op.add_option('', '--logfile', dest='logfile', type='string', default='shellfish.log',
+        op.add_option('', '--logfile', dest='logfile', type='string', default=None,
                       help="Name of file to receive logging output")
 
         op.add_option('', '--missing-genotype', dest='missing_code', type='string', default='0',
@@ -963,6 +963,8 @@ class ShellFish(CommandLineApp):
             self.cleanup()
             
     def sanity_check(self):
+        if settings.logfile is None:
+            settings.logfile = settings.outfile + '.shellfish.log'
         if os.name != 'posix':
             raise ShellFishError('Are you using Windows? %s lives only on linux / unix / OS X.' %
                                  __progname__)
