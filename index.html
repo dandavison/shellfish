@@ -54,7 +54,270 @@ pre {
     overflow:auto;
 }
 </style>
-<link rel="stylesheet" type="text/css" href="dan.css" />
+<style type="text/css">
+.example {
+    background-color: #778899h;
+}
+
+body {
+    color: #bebebe;
+    background-color: #262626;
+    margin: 10px 8% 10px 8%;
+    font-family: Verdana;
+    text-align: justify;
+    font-size: 10pt;
+    padding: 10px;
+    line-height: 1.2em;
+}
+
+.title {
+    color: #87ceeb;
+    padding-bottom: 7px;
+    margin-bottom: 20px;
+    /* border-bottom: 1px solid #222; */
+}
+
+h1 {
+    color: #87ceeb;
+    font-size: 12pt;
+}
+
+h2 {
+    color: #87ceeb;
+    font-size: 12pt;
+    padding-bottom: 4px;
+    margin-bottom: 5px;
+    /* border-bottom: 3px solid #DDD; */
+}
+
+h3 {
+    color: #87ceeb;
+    font-size: 11pt;
+}
+
+h4 {
+    font-size: 9pt;
+}
+
+a {
+    text-decoration: none;
+    color: #008b8b
+}
+
+a:visited {
+    text-decoration: none;
+}
+
+a:hover {
+    /* text-decoration: underline; */
+    color: #40e0d0;
+}
+
+#table-of-contents {
+    /* color: black; */
+    /* background: #FFF; */
+    font-size: 80%;
+    padding: .5em;
+    margin: 1em -2em 1em 1em;
+    float: right;
+    display: block;
+    border: 1px solid #CCC;
+    maxwidth: 50%;
+    /* overflow: auto; */
+}
+
+#table-of-contents a  {
+    color: #228b22;
+}
+
+#table-of-contents a:hover {
+    color: #003333;
+    /* text-decoration: underline; */
+}
+
+#table-of-contents li  {
+    margin: .2em;
+}
+
+#table-of-contents h2 {
+    margin-top: .2em;
+    border: none;
+}
+
+.todo {
+    color: #990000;
+}
+
+.done {
+    color: #006666;
+}
+
+.timestamp-kwd {
+    color: #444;
+}
+
+.tag {
+    color: #DDD;
+    font-size: 70%;
+    font-weight: 500;
+}
+
+li {
+    margin: .4em;
+}
+
+table {
+    border: none;
+}
+
+td {
+    border: none;
+    padding: .1em .7em .1em .3em;
+}
+
+th {
+    border: none;
+}
+
+code {
+    font-size: 100%;
+}
+
+img {
+    border: none;
+}
+
+.share img {
+    opacity: .4;
+    -moz-opacity: .4;
+    filter: alpha(opacity=40);
+}
+
+.share img:hover {
+    opacity: 1;
+    -moz-opacity: 1;
+    filter: alpha(opacity=100);
+}
+
+/* pre {border: 1px solid #555; */
+/*      background: #EEE; */
+/*      font-size: 9pt; */
+/*      padding: 1em; */
+/*     } */
+
+/* pre { */
+/*     color: #e5e5e5; */
+/*     background-color: #000000; */
+/*     padding: 1.4em; */
+/*     border: 2px solid grey; */
+/* } */
+
+pre {
+    color: #bebebe; /* black; */
+    background-color: #262626; /* #eeeeee; */
+    padding: 1.2em;
+    border: 1px solid hotpink;
+}
+
+.builtin {
+    /* font-lock-builtin-face */
+    color: #f4a460;
+}
+.comment {
+    /* font-lock-comment-face */
+    color: #737373;
+}
+.comment-delimiter {
+    /* font-lock-comment-delimiter-face */
+    color: #666666;
+}
+.constant {
+    /* font-lock-constant-face */
+    color: #db7093;
+}
+.doc {
+    /* font-lock-doc-face */
+    color: #b3b3b3;
+}
+.function-name {
+    /* font-lock-function-name-face */
+    color: #5f9ea0;
+}
+.headline {
+    /* headline-face */
+    color: #ffffff;
+    background-color: #000000;
+    font-weight: bold;
+}
+.keyword {
+    /* font-lock-keyword-face */
+    color: #4682b4;
+}
+.negation-char {
+}
+.regexp-grouping-backslash {
+}
+.regexp-grouping-construct {
+}
+.string {
+    /* font-lock-string-face */
+    color: #fffacd;
+}
+.todo-comment {
+    /* todo-comment-face */
+    color: #ffffff;
+    background-color: #000000;
+    font-weight: bold;
+}
+.variable-name {
+    /* font-lock-variable-name-face */
+    color: #ff6a6a;
+}
+.warning {
+    /* font-lock-warning-face */
+    color: #ffffff;
+    background-color: #cd5c5c;
+    font-weight: bold;
+}
+pre.a {
+    color: inherit;
+    background-color: inherit;
+    font: inherit;
+    text-decoration: inherit;
+}
+pre.a:hover {
+    text-decoration: underline;
+}
+
+/* Styles for org-info.js */
+
+.org-info-js_info-navigation
+{
+  border-style:none;
+}
+
+#org-info-js_console-label
+{
+  font-size:10px;
+  font-weight:bold;
+  white-space:nowrap;
+}
+
+.org-info-js_search-highlight
+{
+  background-color:#ffff00;
+  color:#000000;
+  font-weight:bold;
+}
+
+#org-info-js-window
+{
+  border-bottom:1px solid black;
+  padding-bottom:10px;
+  margin-bottom:10px;
+}
+</style>
+
 <script type="text/javascript">
 <!--/*--><![CDATA[/*><!--*/
  function CodeHighlightOn(elem, id)
