@@ -1,3 +1,0 @@
-SHELLFISH_LDIR = lib64
-LBLAS = /usr/local/lib64/libblas.so
-LLAPACK = /usr/local/lib64/liblapack.so

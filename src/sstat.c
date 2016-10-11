@@ -1,1 +1,0 @@
-../iogeno/sstat.c
