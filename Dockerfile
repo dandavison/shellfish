@@ -5,7 +5,7 @@ RUN apt-get install -y \
         git \
         gcc \
         make \
-        libgfortran-4.8-dev \
+        libgfortran-9-dev \
         libblas-dev \
         liblapack-dev \
         python2.7
