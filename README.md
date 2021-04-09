@@ -16,4 +16,5 @@ To avoid all compilation problems, you can run the docker container on your own 
     python shellfish.py --help
     ```
 
-![](/screenshot.png)
+
+<a href="http://dandavison.github.io/shellfish/"><img src="screenshot.png"/></a>
